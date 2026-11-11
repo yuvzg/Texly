@@ -2,12 +2,12 @@ import type { PrismaClient, Session } from '@texly/db';
 import type { DbClient } from './types.js';
 
 export interface CreateSessionData {
-  id?: string;
+  id?: string | undefined;
   userId: string;
   familyId: string;
   tokenHash: string;
-  userAgent?: string | null;
-  ipAddress?: string | null;
+  userAgent?: string | null | undefined;
+  ipAddress?: string | null | undefined;
   expiresAt: Date;
 }
 

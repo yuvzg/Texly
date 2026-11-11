@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { checkDbHealth } from '@texly/db';
+import type { AppContainer } from '../container.js';
 
-export function createApiRouter(): Router {
+export function createApiRouter(container: AppContainer): Router {
   const router = Router();
 
   // Standard health check
@@ -42,6 +43,10 @@ export function createApiRouter(): Router {
       },
     });
   });
+
+  // Mount API modules
+  router.use('/auth', container.authRouter);
+  router.use('/users', container.usersRouter);
 
   return router;
 }

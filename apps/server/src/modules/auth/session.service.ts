@@ -8,14 +8,14 @@ import type { UsersRepository } from '../users/users.repository.js';
 
 export interface CreateSessionParams {
   userId: string;
-  userAgent?: string | null;
-  ipAddress?: string | null;
+  userAgent?: string | null | undefined;
+  ipAddress?: string | null | undefined;
 }
 
 export interface RotateSessionParams {
   refreshToken: string;
-  userAgent?: string | null;
-  ipAddress?: string | null;
+  userAgent?: string | null | undefined;
+  ipAddress?: string | null | undefined;
 }
 
 export interface SessionResult {

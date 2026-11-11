@@ -11,6 +11,11 @@ export const ResponseMetaSchema = z
 
 export type ResponseMeta = z.infer<typeof ResponseMetaSchema>;
 
+export interface ApiSuccessEnvelope<T> {
+  data: T;
+  meta?: ResponseMeta;
+}
+
 export const createSuccessEnvelopeSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
   z
     .object({

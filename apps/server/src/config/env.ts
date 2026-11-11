@@ -54,6 +54,44 @@ const EnvSchema = z
         if (typeof val === 'boolean') return val;
         return val !== 'false' && val !== '0';
       }),
+
+    // CORS & Cookies
+    CORS_ALLOWED_ORIGINS: z
+      .string()
+      .default('http://localhost:3000,http://127.0.0.1:3000')
+      .transform((val) =>
+        val
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      ),
+    COOKIE_DOMAIN: z.string().optional(),
+    COOKIE_SECURE: z
+      .union([z.boolean(), z.string()])
+      .optional()
+      .transform((val) => {
+        if (val === undefined) return undefined;
+        if (typeof val === 'boolean') return val;
+        return val !== 'false' && val !== '0';
+      }),
+
+    // Redis
+    REDIS_URL: z.string().default('redis://127.0.0.1:6379'),
+
+    // Email & SMTP (Mailpit defaults for local development)
+    SMTP_HOST: z.string().default('127.0.0.1'),
+    SMTP_PORT: z.coerce.number().int().default(1025),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_SECURE: z
+      .union([z.boolean(), z.string()])
+      .default(false)
+      .transform((val) => {
+        if (typeof val === 'boolean') return val;
+        return val === 'true' || val === '1';
+      }),
+    EMAIL_FROM: z.string().default('Texly <noreply@texly.app>'),
+    APP_URL: z.string().url().default('http://localhost:3000'),
   })
   .transform((data) => {
     let privateKeyPem = data.JWT_PRIVATE_KEY_PEM;
@@ -68,6 +106,7 @@ const EnvSchema = z
 
     return {
       ...data,
+      COOKIE_SECURE: data.COOKIE_SECURE ?? data.NODE_ENV === 'production',
       JWT_PRIVATE_KEY_PEM: privateKeyPem ?? '',
       JWT_PUBLIC_KEY_PEM: publicKeyPem ?? '',
     };

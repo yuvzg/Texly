@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { UserIdSchema } from '../../ids/index.js';
+import { UserIdSchema, WorkspaceIdSchema } from '../../ids/index.js';
+import { WorkspaceRoleSchema } from '../../enums/roles.js';
+import { SubscriptionPlanSchema } from '../../enums/subscription.js';
+import { UserSettingsDTOSchema } from '../users/index.js';
 
 export const RegisterRequestSchema = z
   .object({
@@ -86,3 +89,24 @@ export const SessionDTOSchema = z
   })
   .strict();
 export type SessionDTO = z.infer<typeof SessionDTOSchema>;
+
+export const AuthWorkspaceSummaryDTOSchema = z
+  .object({
+    id: WorkspaceIdSchema,
+    name: z.string(),
+    slug: z.string(),
+    role: WorkspaceRoleSchema,
+    isPersonal: z.boolean(),
+  })
+  .strict();
+export type AuthWorkspaceSummaryDTO = z.infer<typeof AuthWorkspaceSummaryDTOSchema>;
+
+export const AuthMeResponseDataSchema = z
+  .object({
+    user: UserSummaryDTOSchema,
+    workspaces: z.array(AuthWorkspaceSummaryDTOSchema),
+    settings: UserSettingsDTOSchema,
+    plan: SubscriptionPlanSchema,
+  })
+  .strict();
+export type AuthMeResponseData = z.infer<typeof AuthMeResponseDataSchema>;

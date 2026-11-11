@@ -9,8 +9,13 @@ import type { OpenAPIObject } from 'openapi3-ts/oas31';
 import {
   RegisterRequestSchema,
   LoginRequestSchema,
+  LogoutRequestSchema,
+  VerifyEmailRequestSchema,
+  ForgotPasswordRequestSchema,
+  ResetPasswordRequestSchema,
   AuthTokenResponseDataSchema,
   RefreshResponseDataSchema,
+  AuthMeResponseDataSchema,
   UserDTOSchema,
   UserSettingsDTOSchema,
   UpdateUserRequestSchema,
@@ -161,21 +166,105 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
     },
   });
 
+  // Auth: Logout
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/auth/logout',
+    summary: 'Revoke active session and clear cookie',
+    security: [{ bearerAuth: [] }],
+    request: {
+      body: { content: { 'application/json': { schema: LogoutRequestSchema } } },
+    },
+    responses: {
+      204: {
+        description: 'Session logged out and refresh cookie cleared',
+      },
+    },
+  });
+
   // Users: Get current user profile
   registry.registerPath({
     method: 'get',
     path: '/api/v1/auth/me',
-    summary: 'Get current authenticated user profile',
+    summary: 'Get current authenticated user profile and workspaces',
     security: [{ bearerAuth: [] }],
     responses: {
       200: {
-        description: 'Current user profile',
+        description: 'Current user profile, workspaces, settings and subscription plan',
         content: {
-          'application/json': { schema: createSuccessEnvelopeSchema(UserDTOSchema) },
+          'application/json': { schema: createSuccessEnvelopeSchema(AuthMeResponseDataSchema) },
         },
       },
       401: {
         description: 'Unauthenticated',
+        content: { 'application/json': { schema: ApiErrorEnvelopeSchema } },
+      },
+    },
+  });
+
+  // Auth: Verify Email
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/auth/verify-email',
+    summary: 'Verify user email address using verification token',
+    request: {
+      body: { content: { 'application/json': { schema: VerifyEmailRequestSchema } } },
+    },
+    responses: {
+      200: {
+        description: 'Email verified successfully',
+        content: {
+          'application/json': {
+            schema: createSuccessEnvelopeSchema(z.object({ verified: z.boolean() }).strict()),
+          },
+        },
+      },
+      400: {
+        description: 'Invalid or expired token',
+        content: { 'application/json': { schema: ApiErrorEnvelopeSchema } },
+      },
+    },
+  });
+
+  // Auth: Forgot Password
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/auth/forgot-password',
+    summary: 'Request a password reset link',
+    request: {
+      body: { content: { 'application/json': { schema: ForgotPasswordRequestSchema } } },
+    },
+    responses: {
+      202: {
+        description: 'Generic confirmation response to prevent enumeration',
+        content: {
+          'application/json': {
+            schema: createSuccessEnvelopeSchema(z.object({ message: z.string() }).strict()),
+          },
+        },
+      },
+    },
+  });
+
+  // Auth: Reset Password
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/auth/reset-password',
+    summary: 'Reset password using token',
+    request: {
+      body: { content: { 'application/json': { schema: ResetPasswordRequestSchema } } },
+    },
+    responses: {
+      200: {
+        description: 'Password reset successfully',
+        content: {
+          'application/json': {
+            schema: createSuccessEnvelopeSchema(z.object({ message: z.string() }).strict()),
+          },
+        },
+      },
+      400: {
+        description: 'Invalid or expired reset token',
         content: { 'application/json': { schema: ApiErrorEnvelopeSchema } },
       },
     },
