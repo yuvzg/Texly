@@ -63,7 +63,7 @@ services:
       - texly-dev-network
 
   mailpit:
-    image: axllent/mailpit:v1.22.4
+    image: axllent/mailpit:latest
     container_name: texly-mailpit-dev
     restart: unless-stopped
     environment:

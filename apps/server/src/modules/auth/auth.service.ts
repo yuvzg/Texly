@@ -104,7 +104,7 @@ export class AuthService {
     const sessionId = uuidv7();
     const workspaceId = uuidv7();
 
-    // Clean slug for personal workspace
+    // Clean slug for personal workspace using random suffix from UUIDv7
     const baseSlug =
       input.name
         .toLowerCase()
@@ -112,7 +112,8 @@ export class AuthService {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '')
         .slice(0, 30) || 'workspace';
-    const workspaceSlug = `${baseSlug}-${userId.slice(0, 8)}`;
+    const randomSuffix = userId.replace(/-/g, '').slice(-8);
+    const workspaceSlug = `${baseSlug}-${randomSuffix}`;
 
     // Execute atomic user onboarding transaction
     const createdUser = await this.prisma.$transaction(async (tx) => {
