@@ -1,0 +1,28 @@
+{
+  "name": "@texly/compile-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist",
+    "dev": "node --watch src/entrypoints/runner.ts",
+    "start": "node dist/entrypoints/runner.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@texly/latex": "workspace:*",
+    "@texly/shared": "workspace:*",
+    "dotenv": "^16.4.7",
+    "pino": "^9.6.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@texly/config": "workspace:*",
+    "@types/node": "^22.13.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.5"
+  }
+}
+

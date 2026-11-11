@@ -1,0 +1,21 @@
+{
+  "name": "@texly/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/frontend.json": "./tsconfig/frontend.json",
+    "./tsconfig/backend.json": "./tsconfig/backend.json",
+    "./tsconfig/library.json": "./tsconfig/library.json",
+    "./prettier": "./prettier/index.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
+

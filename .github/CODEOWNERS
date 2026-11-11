@@ -1,0 +1,33 @@
+# CODEOWNERS - Texly Monorepo
+#
+# NOTE: Replace placeholder aliases (e.g., @team-lead) with actual GitHub organization team slugs or usernames.
+#
+# Workstream boundaries defined in CODING_STANDARDS.md §1:
+
+# Global fallback
+*                   @replace-with-lead-maintainer
+
+# Shared contracts (requires multi-workstream sign-off)
+/packages/shared/   @replace-with-contracts-owners
+
+# Database & Server Core
+/packages/db/       @replace-with-server-core-team
+/apps/server/       @replace-with-server-core-team
+
+# LaTeX pure libraries
+/packages/latex/    @replace-with-latex-libs-team
+
+# LLM integration
+/packages/llm/      @replace-with-llm-team
+
+# Isolated compilation runner & sandbox
+/apps/compile-runner/   @replace-with-compile-team
+/docker/texlive/        @replace-with-compile-team
+
+# Web application frontend
+/apps/web/          @replace-with-web-team
+
+# Infrastructure & CI
+/infra/             @replace-with-infra-team
+/.github/           @replace-with-infra-team
+

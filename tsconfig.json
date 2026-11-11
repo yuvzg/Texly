@@ -1,0 +1,10 @@
+{
+  "extends": "./packages/config/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  },
+  "include": ["tests/**/*", "eslint.config.mjs"],
+  "exclude": ["tests/fixtures/**"]
+}
