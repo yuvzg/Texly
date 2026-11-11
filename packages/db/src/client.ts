@@ -70,3 +70,4 @@ export async function disconnectDb(): Promise<void> {
 
 export { checkDatabaseHealth, withTransaction };
 export type { DatabaseHealthResult, TransactionClient, TransactionOptions };
+export type { PrismaClient } from './generated/prisma/client.js';
