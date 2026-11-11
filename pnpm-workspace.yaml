@@ -3,6 +3,11 @@ packages:
   - 'packages/*'
 
 allowBuilds:
+  '@prisma/engines': true
+  cpu-features: true
   esbuild: true
+  prisma: true
+  protobufjs: true
+  ssh2: true
 minimumReleaseAgeExclude:
   - lucide-react@1.71.0

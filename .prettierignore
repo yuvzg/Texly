@@ -9,3 +9,4 @@ pnpm-lock.yaml
 docs
 .husky/_
 *.tsbuildinfo
+packages/db/src/generated

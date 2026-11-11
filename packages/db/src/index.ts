@@ -1,8 +1,5 @@
-export interface DatabaseHealth {
-  connected: boolean;
-  latencyMs?: number;
-}
-
-export function checkDbHealth(): DatabaseHealth {
-  return { connected: true, latencyMs: 0 };
-}
+export * from './client.js';
+export * from './config.js';
+export * from './health.js';
+export * from './transaction.js';
+export * from './types.js';

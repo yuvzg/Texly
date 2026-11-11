@@ -13,15 +13,30 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
-    "clean": "rm -rf dist",
+    "build": "prisma generate && tsc -b",
+    "clean": "rm -rf dist src/generated",
+    "generate": "prisma generate",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed": "tsx prisma/seed.ts",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@texly/shared": "workspace:*"
+    "@prisma/adapter-pg": "7.9.1",
+    "@prisma/client": "7.9.1",
+    "@prisma/config": "7.9.1",
+    "@texly/shared": "workspace:*",
+    "pg": "^8.23.1",
+    "prisma": "7.9.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "^10.28.0",
     "@texly/config": "workspace:*",
-    "typescript": "^5.9.3"
+    "@types/pg": "^8.23.1",
+    "testcontainers": "^10.28.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
   }
 }

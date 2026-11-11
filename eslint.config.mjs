@@ -12,6 +12,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.turbo/**',
       '**/next-env.d.ts',
+      '**/generated/**',
       'tests/fixtures/**',
       '**/*.cjs',
     ],
