@@ -15,9 +15,11 @@
     "dev": "turbo dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "gen:openapi": "pnpm --filter @texly/shared gen:openapi",
     "lint": "eslint .",
     "prepare": "husky || true",
     "test": "turbo test && vitest run tests/",
+    "test:contracts": "vitest run packages/shared/tests/",
     "typecheck": "turbo typecheck && tsc --noEmit"
   },
   "devDependencies": {

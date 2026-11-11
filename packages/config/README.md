@@ -11,4 +11,3 @@ Shared configuration presets for the Texly monorepo.
   - `frontend.json`: Next.js 16 App Router preset.
 - **Prettier (`prettier/`)**:
   - Prettier formatting rules per `CODING_STANDARDS.md`.
-

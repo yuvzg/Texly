@@ -20,4 +20,3 @@ export const logger = pino({
 export function createChildLogger(moduleName: string) {
   return logger.child({ module: moduleName });
 }
-

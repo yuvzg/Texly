@@ -66,4 +66,3 @@ jobs:
 
       - name: Build applications and packages
         run: pnpm build
-

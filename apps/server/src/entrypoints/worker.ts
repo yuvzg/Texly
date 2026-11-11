@@ -17,4 +17,3 @@ export function startWorker() {
 if (process.env['NODE_ENV'] !== 'test') {
   startWorker();
 }
-

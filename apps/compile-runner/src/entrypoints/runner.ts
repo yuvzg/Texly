@@ -23,4 +23,3 @@ export function startRunner() {
 if (process.env['NODE_ENV'] !== 'test') {
   startRunner();
 }
-

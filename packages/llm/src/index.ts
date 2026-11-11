@@ -16,4 +16,3 @@ export interface LLMProvider {
   id: string;
   generateText(messages: readonly LLMMessage[]): Promise<LLMResponse>;
 }
-

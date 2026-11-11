@@ -25,4 +25,3 @@ describe('Server HTTP Probes', () => {
     expect(res.body.meta).toHaveProperty('requestId');
   });
 });
-

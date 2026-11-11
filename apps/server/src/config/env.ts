@@ -24,4 +24,3 @@ export function loadEnv(): ServerEnv {
 }
 
 export const env = loadEnv();
-

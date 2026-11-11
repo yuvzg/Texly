@@ -13,4 +13,3 @@ Modular monolith backend for Texly providing REST APIs, realtime updates, and ba
 - Pino JSON structured logging with field-level redaction
 - Zod-validated environment configuration
 - Request ID propagation via `x-request-id`
-

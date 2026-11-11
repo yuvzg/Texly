@@ -25,4 +25,3 @@ export function startApiServer() {
 if (process.env['NODE_ENV'] !== 'test') {
   startApiServer();
 }
-

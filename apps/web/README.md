@@ -14,4 +14,3 @@ Next.js 16 frontend application for Texly.
 
 - **Strictly UI layer**: Contains zero business logic and no database connections.
 - **Allowed package imports**: `@texly/shared` (DTOs, types) and `@texly/latex` (parsers/helpers).
-

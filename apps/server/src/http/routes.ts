@@ -45,4 +45,3 @@ export function createApiRouter(): Router {
 
   return router;
 }
-

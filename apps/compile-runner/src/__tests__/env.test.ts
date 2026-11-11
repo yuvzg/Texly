@@ -8,4 +8,3 @@ describe('Compile Runner Configuration', () => {
     expect(config.COMPILE_TIMEOUT_MS).toBeGreaterThanOrEqual(1000);
   });
 });
-

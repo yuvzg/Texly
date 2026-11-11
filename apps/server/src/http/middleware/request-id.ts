@@ -19,4 +19,3 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
   res.setHeader(REQUEST_ID_HEADER, requestId);
   next();
 }
-

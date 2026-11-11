@@ -11,4 +11,3 @@ export function parseLatexErrors(rawLog: string): LatexDiagnostic[] {
   }
   return [];
 }
-

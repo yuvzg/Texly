@@ -6,4 +6,3 @@ export interface DatabaseHealth {
 export function checkDbHealth(): DatabaseHealth {
   return { connected: true, latencyMs: 0 };
 }
-
