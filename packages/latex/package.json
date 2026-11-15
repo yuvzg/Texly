@@ -15,13 +15,15 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@texly/shared": "workspace:*"
   },
   "devDependencies": {
     "@texly/config": "workspace:*",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.5"
   }
 }
