@@ -1,0 +1,30 @@
+% /opt/texly/texmf.cnf - Texly LaTeX Compilation Sandbox Security Configuration
+% Source of truth: COMPILATION_ENGINE.md §4.3 & SECURITY.md §3.1
+% This configuration strictly hardens the TeX engine against untrusted workloads.
+
+% 1. Shell escape restrictions (disallow \write18 completely)
+shell_escape = f
+shell_escape_commands = none
+
+% 2. Paranoid file access policy
+% 'p' (paranoid) blocks reading and writing to absolute paths, parent directory traversal (..), and dotfiles.
+openin_any = p
+openout_any = p
+
+% 3. Parsing restrictions (prevent %& format injection or directive switches on the first line)
+parse_first_line = f
+
+% 4. Terminal and log output bounding (bounds line wrapping to prevent runaway parsing overhead)
+max_print_line = 79
+error_line = 79
+half_error_line = 50
+
+% 5. Bounded TeX memory ceilings (forces TeX engine to abort before consuming excessive container memory)
+main_memory = 5000000
+hash_extra = 500000
+pool_size = 1250000
+string_vacancies = 90000
+max_strings = 500000
+save_size = 100000
+stack_size = 10000
+

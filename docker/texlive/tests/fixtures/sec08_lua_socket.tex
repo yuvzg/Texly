@@ -1,0 +1,15 @@
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+Test Lua socket networking availability restriction.
+\begin{luacode*}
+local ok, socket = pcall(require, "socket")
+if ok and socket ~= nil then
+  tex.print("\\message{LUA_SOCKET_ENABLED}")
+else
+  tex.print("\\message{LUA_SOCKET_DISABLED}")
+end
+\end{luacode*}
+Done.
+\end{document}
+

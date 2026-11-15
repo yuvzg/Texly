@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TexlyLatexmkExecutionPolicy",
+  "description": "Hardened latexmk argument policy for untrusted compilation",
+  "fixedFlags": [
+    "-norc",
+    "-f",
+    "-interaction=nonstopmode",
+    "-file-line-error",
+    "-synctex=1",
+    "-outdir=/work/out",
+    "-auxdir=/work/aux"
+  ],
+  "engines": {
+    "pdflatex": {
+      "flag": "-pdf",
+      "commandTemplate": "pdflatex -no-shell-escape -interaction=nonstopmode -file-line-error -synctex=1 %O %S"
+    },
+    "xelatex": {
+      "flag": "-xelatex",
+      "commandTemplate": "xelatex -no-shell-escape -interaction=nonstopmode -file-line-error -synctex=1 %O %S"
+    },
+    "lualatex": {
+      "flag": "-lualatex",
+      "commandTemplate": "lualatex --safer --nosocket -no-shell-escape -interaction=nonstopmode -file-line-error -synctex=1 %O %S"
+    }
+  },
+  "bibTools": {
+    "auto": [],
+    "bibtex": ["-bibtex"],
+    "biber": ["-bibtex"],
+    "none": ["-bibtex-"]
+  },
+  "forbiddenDirectives": [
+    "--shell-escape",
+    "-shell-escape",
+    "-enable-write18",
+    "--enable-write18",
+    "-r",
+    "-norc=false"
+  ]
+}

@@ -1,0 +1,6 @@
+\documentclass{article}
+\def\loopforever#1{\loopforever{#1#1}}
+\begin{document}
+Test infinite macro recursion limit.
+\loopforever{a}
+\end{document}

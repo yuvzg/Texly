@@ -1,0 +1,21 @@
+\documentclass{article}
+\usepackage{luacode}
+
+\title{Golden LuaLaTeX Safe Computation}
+\author{Texly Testing Suite}
+
+\begin{document}
+\maketitle
+
+\section{Safe Lua In-Engine Calculation}
+Calculating factorial in Lua inside the sandbox:
+
+\begin{luacode*}
+function fact(n)
+  if n == 0 then return 1 else return n * fact(n - 1) end
+end
+tex.print("10! = " .. fact(10))
+\end{luacode*}
+
+\end{document}
+

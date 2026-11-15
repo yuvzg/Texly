@@ -1,0 +1,10 @@
+\documentclass{article}
+\begin{document}
+Test writing outside designated working directory.
+\newwrite\outsidefile
+\openout\outsidefile=/tmp/evil_written_by_latex.txt
+\write\outsidefile{pwned outside}
+\closeout\outsidefile
+Done.
+\end{document}
+

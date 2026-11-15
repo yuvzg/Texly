@@ -1,0 +1,31 @@
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+Test Lua os.execute and io.popen restrictions.
+\begin{luacode*}
+local can_execute = false
+if os and os.execute then
+  local ok, res = pcall(os.execute, "touch /work/out/pwned_lua_os.txt")
+  if ok and res ~= nil and res ~= false then
+    can_execute = true
+  end
+end
+
+local can_popen = false
+if io and io.popen then
+  local ok, pipe = pcall(io.popen, "touch /work/out/pwned_lua_popen.txt")
+  if ok and pipe then
+    can_popen = true
+    pipe:close()
+  end
+end
+
+if can_execute or can_popen then
+  tex.print("\\message{LUA_RCE_ENABLED}")
+else
+  tex.print("\\message{LUA_RCE_DISABLED}")
+end
+\end{luacode*}
+Done.
+\end{document}
+

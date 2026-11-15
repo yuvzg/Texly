@@ -1,0 +1,16 @@
+\documentclass{article}
+\begin{document}
+Test large file output bounds.
+\newwrite\bigfile
+\openout\bigfile=bigfile.txt
+\newcount\n
+\n=0
+\loop
+  \write\bigfile{01234567890123456789012345678901234567890123456789012345678901234567890123456789}
+  \advance\n by 1
+\ifnum\n<1000
+\repeat
+\closeout\bigfile
+Done.
+\end{document}
+

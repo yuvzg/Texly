@@ -1,0 +1,8 @@
+\documentclass{article}
+\begin{document}
+Test write18 execution prevention.
+\write18{touch /work/out/pwned_write18.txt}
+\write18{echo "pwned" > /work/out/pwned_write18.txt}
+Done.
+\end{document}
+

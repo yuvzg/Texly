@@ -1,0 +1,15 @@
+\documentclass{article}
+\begin{document}
+Test reading /etc/passwd path restriction.
+\newread\passwdfile
+\openin\passwdfile=/etc/passwd
+\ifeof\passwdfile
+  \message{PASSWD_OPEN_BLOCKED}
+\else
+  \read\passwdfile to\passwdline
+  \message{PASSWD_LEAKED:\passwdline}
+\fi
+\closein\passwdfile
+Done.
+\end{document}
+

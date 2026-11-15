@@ -1,0 +1,9 @@
+\documentclass{article}
+\usepackage{shellesc}
+\begin{document}
+Test ShellEscape macro inertness.
+\ShellEscape{touch /work/out/pwned_shellescape.txt}
+\ShellEscape{echo "pwned" > /work/out/pwned_shellescape.txt}
+Done.
+\end{document}
+
