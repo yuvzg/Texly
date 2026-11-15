@@ -41,3 +41,4 @@ fi
 
 echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] Compile runner drain completed successfully."
 exit 0
+

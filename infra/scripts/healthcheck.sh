@@ -34,3 +34,4 @@ fi
 
 echo "OK: Compile runner node is healthy"
 exit 0
+

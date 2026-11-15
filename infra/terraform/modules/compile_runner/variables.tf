@@ -76,3 +76,4 @@ variable "redis_url" {
   type        = string
   default     = "redis://localhost:6379"
 }
+

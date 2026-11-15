@@ -17,3 +17,4 @@ output "iam_role_arn" {
   description = "IAM Role ARN of compile runner instances"
   value       = aws_iam_role.compile_runner.arn
 }
+

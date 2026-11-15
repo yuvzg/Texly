@@ -71,3 +71,4 @@ systemctl enable --now texly-compile-runner.service || true
     -c file:/opt/texly/cloudwatch/amazon-cloudwatch-agent.json || true
 
 echo "==> Compile runner setup completed successfully."
+

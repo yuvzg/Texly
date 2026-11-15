@@ -18,7 +18,7 @@
     "gen:openapi": "pnpm --filter @texly/shared gen:openapi",
     "lint": "eslint .",
     "prepare": "husky || true",
-    "test": "turbo test && vitest run tests/",
+    "test": "turbo test --concurrency=1 && vitest run",
     "test:contracts": "vitest run packages/shared/tests/",
     "typecheck": "turbo typecheck && tsc --noEmit"
   },
