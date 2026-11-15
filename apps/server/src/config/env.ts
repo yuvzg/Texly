@@ -78,6 +78,25 @@ const EnvSchema = z
     // Redis
     REDIS_URL: z.string().default('redis://127.0.0.1:6379'),
 
+    // Storage & S3 / R2 / MinIO
+    STORAGE_DRIVER: z.enum(['s3', 'memory']).default('s3'),
+    S3_ENDPOINT: z.string().default('http://127.0.0.1:9000'),
+    S3_REGION: z.string().default('auto'),
+    S3_ACCESS_KEY_ID: z.string().default('minioadmin'),
+    S3_SECRET_ACCESS_KEY: z.string().default('minioadmin_secret'),
+    S3_PROJECTS_BUCKET: z.string().default('texly-dev-projects'),
+    S3_FORCE_PATH_STYLE: z
+      .union([z.boolean(), z.string()])
+      .default(true)
+      .transform((val) => {
+        if (typeof val === 'boolean') return val;
+        return val === 'true' || val === '1';
+      }),
+
+    // Compilation Sandbox Config
+    COMPILATION_IMAGE_TAG: z.string().default('texly/texlive:dev'),
+    COMPILATION_LIMITS_VERSION: z.string().default('v1'),
+
     // Email & SMTP (Mailpit defaults for local development)
     SMTP_HOST: z.string().default('127.0.0.1'),
     SMTP_PORT: z.coerce.number().int().default(1025),
