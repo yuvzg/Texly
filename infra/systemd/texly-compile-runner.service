@@ -1,0 +1,37 @@
+[Unit]
+Description=Texly LaTeX Isolated Compilation Runner
+After=network.target docker.service
+Requires=docker.service
+Documentation=https://docs.texly.local/compilation-engine
+
+[Service]
+Type=simple
+User=texlyrunner
+Group=docker
+WorkingDirectory=/opt/texly/compile-runner
+
+# Load non-secret environment variables (Redis URL, concurrency, paths)
+# Compile runner nodes hold NO database, R2 or LLM credentials
+EnvironmentFile=/etc/texly/compile-runner.env
+
+ExecStartPre=/usr/bin/docker info
+ExecStart=/usr/local/bin/node /opt/texly/compile-runner/dist/entrypoints/runner.js
+
+# Graceful termination handling: allow in-flight jobs to complete within 120s
+KillSignal=SIGTERM
+TimeoutStopSec=120
+KillMode=mixed
+
+# Restart policy: back off on unexpected failures, avoid runaway restart loops
+Restart=always
+RestartSec=5
+RestartPreventExitStatus=2
+
+# Security & resource isolation
+LimitNOFILE=65536
+LimitNPROC=8192
+StandardOutput=append:/var/log/texly/compile-runner.log
+StandardError=append:/var/log/texly/compile-runner.log
+
+[Install]
+WantedBy=multi-user.target

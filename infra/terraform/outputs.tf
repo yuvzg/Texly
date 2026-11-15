@@ -18,3 +18,14 @@ output "ecs_cluster_name" {
   description = "ECS cluster name"
 }
 
+output "compile_runner_security_group_id" {
+  value       = module.compile_runner.compile_runner_security_group_id
+  description = "Compile runner security group ID"
+}
+
+output "compile_runner_asg_name" {
+  value       = module.compile_runner.autoscaling_group_name
+  description = "Compile runner Auto Scaling Group name"
+}
+
+
