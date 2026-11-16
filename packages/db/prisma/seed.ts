@@ -39,12 +39,15 @@ export async function runSeed(client: PrismaClient): Promise<void> {
     update: {
       email: 'demo@texly.app',
       name: 'Demo Author',
+      passwordHash:
+        '$argon2id$v=19$m=65536,t=3,p=4$zPQOnggTgGAefovlpkZ46w$720I9gb+YytjwW7Q7Wr9a0uIhalSa2dYUH6iVz6vEao',
     },
     create: {
       id: DEMO_USER_ID,
       email: 'demo@texly.app',
       name: 'Demo Author',
-      passwordHash: '$argon2id$v=19$m=65536,t=3,p=4$dev_only_password_hash_never_use_in_prod',
+      passwordHash:
+        '$argon2id$v=19$m=65536,t=3,p=4$zPQOnggTgGAefovlpkZ46w$720I9gb+YytjwW7Q7Wr9a0uIhalSa2dYUH6iVz6vEao', // Password123!
       emailVerifiedAt: new Date(),
     },
   });
