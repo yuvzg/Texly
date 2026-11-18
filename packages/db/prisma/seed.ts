@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createHash } from 'node:crypto';
 import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';

@@ -466,6 +466,9 @@ importers:
       '@texly/shared':
         specifier: workspace:*
         version: link:../shared
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
       pg:
         specifier: ^8.23.1
         version: 8.23.1

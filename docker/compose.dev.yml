@@ -41,7 +41,7 @@ services:
       - texly-dev-network
 
   minio:
-    image: minio/minio:RELEASE.2024-11-07T00-52-28Z
+    image: docker.io/pgsty/silo:RELEASE.2026-11-12T00-00-00Z
     container_name: texly-minio-dev
     restart: unless-stopped
     command: ['server', '/data', '--console-address', ':9001']
@@ -63,17 +63,18 @@ services:
       - texly-dev-network
 
   minio-init:
-    image: minio/mc:latest
+    image: docker.io/pgsty/mc:RELEASE.2026-11-12T00-00-00Z
     container_name: texly-minio-init-dev
     depends_on:
       minio:
         condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin_secret};
-      /usr/bin/mc mb local/texly-dev-projects || true;
-      exit 0;
-      "
+    entrypoint: ['/bin/sh', '-c']
+    command: >
+      set -e;
+      mc alias set local http://minio:9000
+      ${MINIO_ROOT_USER:-minioadmin}
+      ${MINIO_ROOT_PASSWORD:-minioadmin_secret};
+      mc mb --ignore-existing local/texly-dev-projects;
     networks:
       - texly-dev-network
 
