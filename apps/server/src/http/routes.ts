@@ -47,6 +47,7 @@ export function createApiRouter(container: AppContainer): Router {
   // Mount API modules
   router.use('/auth', container.authRouter);
   router.use('/users', container.usersRouter);
+  router.use('/projects/:projectId/documents', container.documentsRouter);
   router.use('/projects/:projectId/compilations', container.projectCompilationsRouter);
   router.use('/compilations', container.compilationsRouter);
 

@@ -193,6 +193,14 @@ export const apiClient = {
     });
   },
 
+  put<T>(path: string, data?: unknown, options?: RequestOptions): Promise<T> {
+    return request<T>(path, {
+      ...options,
+      method: 'PUT',
+      ...(data !== undefined ? { body: JSON.stringify(data) } : {}),
+    });
+  },
+
   patch<T>(path: string, data?: unknown, options?: RequestOptions): Promise<T> {
     return request<T>(path, {
       ...options,

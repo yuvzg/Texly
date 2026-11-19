@@ -46,6 +46,12 @@ import {
   createProjectCompilationsRouter,
   createCompilationsRouter,
 } from './modules/compilations/index.js';
+import {
+  DocumentsRepository,
+  DocumentsService,
+  DocumentsController,
+  createDocumentsRouter,
+} from './modules/documents/index.js';
 
 export interface ContainerDependencies {
   db?: DatabaseInstance | undefined;
@@ -135,6 +141,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
   const verificationTokensRepo = new VerificationTokensRepository(db.client);
   const workspacesRepo = new WorkspacesRepository(db.client);
   const compilationsRepo = new CompilationsRepository(db.client);
+  const documentsRepo = new DocumentsRepository(db.client);
 
   // Password & Breached check
   const breachedPasswordChecker = new BreachedPasswordClient({
@@ -197,6 +204,8 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     },
   );
 
+  const documentsService = new DocumentsService(documentsRepo, realtimeEmitter);
+
   // Cookie configuration
   const cookieOptions = {
     secure: currentEnv.COOKIE_SECURE,
@@ -208,6 +217,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
   const authController = new AuthController(authService, cookieOptions);
   const usersController = new UsersController(usersRepo, userSettingsRepo, workspacesRepo);
   const compilationsController = new CompilationsController(compilationsService);
+  const documentsController = new DocumentsController(documentsService);
 
   // Compilation Background Workers & Jobs
   const compilationsWorker = new CompilationsWorker(
@@ -253,6 +263,12 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     originMiddleware,
   });
 
+  const documentsRouter = createDocumentsRouter({
+    controller: documentsController,
+    authMiddleware,
+    originMiddleware,
+  });
+
   return {
     db,
     env: currentEnv,
@@ -267,15 +283,18 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     verificationTokensRepo,
     workspacesRepo,
     compilationsRepo,
+    documentsRepo,
     passwordService,
     jwtService,
     sessionService,
     emailService,
     authService,
     compilationsService,
+    documentsService,
     authController,
     usersController,
     compilationsController,
+    documentsController,
     compilationsWorker,
     compilationsReconciler,
     compilationsRetention,
@@ -285,6 +304,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     usersRouter,
     projectCompilationsRouter,
     compilationsRouter,
+    documentsRouter,
   };
 }
 

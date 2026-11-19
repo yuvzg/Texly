@@ -1,41 +1,35 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Sparkles, Files, ArrowLeft, FileText } from 'lucide-react';
+import { Sparkles, Files, ArrowLeft, FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProtectedRoute } from '@/components/auth/route-guards';
 import { CompileToolbar } from '@/components/editor/compile-toolbar';
+import { SaveStatusIndicator } from '@/components/editor/save-status-indicator';
+import { useDocumentAutosave } from '@/hooks/use-document-autosave';
+
+const DEFAULT_DEMO_PROJECT_ID = '01931a00-0000-7000-8000-000000000003';
 
 function WorkspaceContent() {
   const searchParams = useSearchParams();
-  const projectId = searchParams.get('projectId') || '018f6c4a-8e2b-7c1e-9a1d-4f8b2c5e7a90';
-  const [docContent, setDocContent] = useState<string>(`\\documentclass{article}
-\\usepackage{amsmath}
+  const projectId = searchParams.get('projectId') || DEFAULT_DEMO_PROJECT_ID;
 
-\\title{Sample Document}
-\\author{Texly Author}
-\\date{\\today}
-
-\\begin{document}
-\\maketitle
-
-\\section{Introduction}
-Welcome to Texly, a production-grade web-based LaTeX editor.
-
-\\end{document}`);
-
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-  // Autosave flush handler before compiling
-  const handleFlushSave = async (): Promise<boolean> => {
-    if (!hasUnsavedChanges) return true;
-    // Simulate autosave flush completion
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setHasUnsavedChanges(false);
-    return true;
-  };
+  const {
+    document,
+    content,
+    setContent,
+    status,
+    errorMessage,
+    lastSavedAt,
+    isLoading,
+    flushSave,
+    reloadDocument,
+  } = useDocumentAutosave({
+    projectId,
+    debounceMs: 1000,
+  });
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
@@ -45,12 +39,16 @@ Welcome to Texly, a production-grade web-based LaTeX editor.
           <Link href="/dashboard" className="text-gray-500 hover:text-gray-700">
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <span className="font-semibold text-sm text-gray-800">Sample Paper / main.tex</span>
-          {hasUnsavedChanges && (
-            <span className="text-[11px] text-amber-600 font-medium bg-amber-50 px-2 py-0.5 rounded">
-              Unsaved changes
-            </span>
-          )}
+          <span className="font-semibold text-sm text-gray-800">
+            {document?.path ? `Project / ${document.path}` : 'Project Editor'}
+          </span>
+          <SaveStatusIndicator
+            status={status}
+            lastSavedAt={lastSavedAt}
+            errorMessage={errorMessage}
+            onRetry={flushSave}
+            onReload={reloadDocument}
+          />
         </div>
 
         <div className="flex items-center gap-3">
@@ -62,7 +60,7 @@ Welcome to Texly, a production-grade web-based LaTeX editor.
           <CompileToolbar
             projectId={projectId}
             defaultEngine="PDFLATEX"
-            onFlushSave={handleFlushSave}
+            onFlushSave={flushSave}
           />
         </div>
       </header>
@@ -76,7 +74,7 @@ Welcome to Texly, a production-grade web-based LaTeX editor.
           </div>
           <div className="p-2 space-y-1 text-sm">
             <div className="px-2 py-1.5 rounded bg-blue-50 text-blue-700 font-medium cursor-pointer text-xs flex items-center gap-2">
-              <FileText className="h-3.5 w-3.5" /> main.tex
+              <FileText className="h-3.5 w-3.5" /> {document?.path || 'main.tex'}
             </div>
             <div className="px-2 py-1.5 rounded hover:bg-gray-100 text-gray-700 cursor-pointer text-xs flex items-center gap-2">
               <FileText className="h-3.5 w-3.5" /> references.bib
@@ -87,19 +85,25 @@ Welcome to Texly, a production-grade web-based LaTeX editor.
         {/* Center: Editor Panel */}
         <section className="flex-1 bg-white flex flex-col border-r border-gray-200">
           <div className="h-8 border-b border-gray-200 px-4 flex items-center justify-between text-xs text-gray-500 bg-gray-50">
-            <span>main.tex</span>
-            <span className="text-[11px] text-gray-400">LaTeX • UTF-8</span>
+            <span>{document?.path || 'main.tex'}</span>
+            <span className="text-[11px] text-gray-400">
+              {document ? `Rev ${document.revision} • LaTeX • UTF-8` : 'LaTeX • UTF-8'}
+            </span>
           </div>
-          <div className="flex-1 p-4 font-mono text-xs overflow-auto text-gray-800 bg-white">
-            <textarea
-              value={docContent}
-              onChange={(e) => {
-                setDocContent(e.target.value);
-                setHasUnsavedChanges(true);
-              }}
-              className="w-full h-full resize-none font-mono text-xs leading-relaxed outline-none border-none p-0 focus:ring-0"
-              spellCheck={false}
-            />
+          <div className="flex-1 p-4 font-mono text-xs overflow-auto text-gray-800 bg-white relative">
+            {isLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              </div>
+            ) : (
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="w-full h-full resize-none font-mono text-xs leading-relaxed outline-none border-none p-0 focus:ring-0"
+                spellCheck={false}
+                placeholder="Enter LaTeX document content..."
+              />
+            )}
           </div>
         </section>
 
