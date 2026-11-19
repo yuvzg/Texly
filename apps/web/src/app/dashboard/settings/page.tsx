@@ -19,12 +19,14 @@ import { Button } from '@/components/ui/button';
 import { AuthAlert, FormField } from '@/components/auth/auth-ui';
 import { ProtectedRoute } from '@/components/auth/route-guards';
 import { useAuth } from '@/providers/auth-provider';
+import { useTheme } from '@/providers/theme-provider';
 import { UpdateUserRequestSchema, UpdateUserSettingsRequestSchema } from '@texly/shared';
 import { ApiClientError } from '@/lib/api-client';
 
 export default function UserSettingsPage() {
   const router = useRouter();
   const { user, settings, plan, updateProfile, updateUserSettings, logout } = useAuth();
+  const { setTheme: setGlobalTheme } = useTheme();
 
   // Profile Form state
   const [name, setName] = useState(user?.name || '');
@@ -264,8 +266,12 @@ export default function UserSettingsPage() {
                   <select
                     id="theme"
                     value={theme}
-                    onChange={(e) => setTheme(e.target.value as 'system' | 'light' | 'dark')}
-                    className="w-full px-3 py-2 text-sm border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    onChange={(e) => {
+                      const newT = e.target.value as 'system' | 'light' | 'dark';
+                      setTheme(newT);
+                      setGlobalTheme(newT);
+                    }}
+                    className="w-full px-3 py-2 text-sm border rounded-md border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
                     <option value="system">System Default</option>
                     <option value="light">Light Theme</option>
