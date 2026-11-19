@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Sparkles, Files, ArrowLeft, FileText, Loader2 } from 'lucide-react';
@@ -9,12 +9,29 @@ import { ProtectedRoute } from '@/components/auth/route-guards';
 import { CompileToolbar } from '@/components/editor/compile-toolbar';
 import { SaveStatusIndicator } from '@/components/editor/save-status-indicator';
 import { useDocumentAutosave } from '@/hooks/use-document-autosave';
+import { fetchProject } from '@/lib/projects';
+import type { ProjectDTO } from '@texly/shared';
 
 const DEFAULT_DEMO_PROJECT_ID = '01931a00-0000-7000-8000-000000000003';
 
 function WorkspaceContent() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId') || DEFAULT_DEMO_PROJECT_ID;
+  const [project, setProject] = useState<ProjectDTO | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (projectId) {
+      fetchProject(projectId)
+        .then((p) => {
+          if (isMounted) setProject(p);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId]);
 
   const {
     document,
@@ -40,7 +57,11 @@ function WorkspaceContent() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <span className="font-semibold text-sm text-gray-800">
-            {document?.path ? `Project / ${document.path}` : 'Project Editor'}
+            {project
+              ? `${project.name} / ${document?.path || 'main.tex'}`
+              : document?.path
+                ? `Project / ${document.path}`
+                : 'Project Editor'}
           </span>
           <SaveStatusIndicator
             status={status}
@@ -59,7 +80,7 @@ function WorkspaceContent() {
           {/* Integrated Compile Toolbar */}
           <CompileToolbar
             projectId={projectId}
-            defaultEngine="PDFLATEX"
+            defaultEngine={project?.engine || 'PDFLATEX'}
             onFlushSave={flushSave}
           />
         </div>

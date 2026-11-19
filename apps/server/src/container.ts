@@ -52,6 +52,16 @@ import {
   DocumentsController,
   createDocumentsRouter,
 } from './modules/documents/index.js';
+import {
+  ProjectsRepository,
+  ProjectsService,
+  ProjectsController,
+  createProjectsRouter,
+} from './modules/projects/index.js';
+import {
+  WorkspacesController,
+  createWorkspacesRouter,
+} from './modules/workspaces/index.js';
 
 export interface ContainerDependencies {
   db?: DatabaseInstance | undefined;
@@ -142,6 +152,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
   const workspacesRepo = new WorkspacesRepository(db.client);
   const compilationsRepo = new CompilationsRepository(db.client);
   const documentsRepo = new DocumentsRepository(db.client);
+  const projectsRepo = new ProjectsRepository(db.client);
 
   // Password & Breached check
   const breachedPasswordChecker = new BreachedPasswordClient({
@@ -205,6 +216,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
   );
 
   const documentsService = new DocumentsService(documentsRepo, realtimeEmitter);
+  const projectsService = new ProjectsService(projectsRepo, workspacesRepo);
 
   // Cookie configuration
   const cookieOptions = {
@@ -218,6 +230,8 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
   const usersController = new UsersController(usersRepo, userSettingsRepo, workspacesRepo);
   const compilationsController = new CompilationsController(compilationsService);
   const documentsController = new DocumentsController(documentsService);
+  const projectsController = new ProjectsController(projectsService);
+  const workspacesController = new WorkspacesController(workspacesRepo);
 
   // Compilation Background Workers & Jobs
   const compilationsWorker = new CompilationsWorker(
@@ -269,6 +283,18 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     originMiddleware,
   });
 
+  const projectsRouter = createProjectsRouter({
+    controller: projectsController,
+    authMiddleware,
+    originMiddleware,
+  });
+
+  const workspacesRouter = createWorkspacesRouter({
+    controller: workspacesController,
+    authMiddleware,
+    originMiddleware,
+  });
+
   return {
     db,
     env: currentEnv,
@@ -284,6 +310,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     workspacesRepo,
     compilationsRepo,
     documentsRepo,
+    projectsRepo,
     passwordService,
     jwtService,
     sessionService,
@@ -291,10 +318,13 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     authService,
     compilationsService,
     documentsService,
+    projectsService,
     authController,
     usersController,
     compilationsController,
     documentsController,
+    projectsController,
+    workspacesController,
     compilationsWorker,
     compilationsReconciler,
     compilationsRetention,
@@ -305,6 +335,8 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     projectCompilationsRouter,
     compilationsRouter,
     documentsRouter,
+    projectsRouter,
+    workspacesRouter,
   };
 }
 

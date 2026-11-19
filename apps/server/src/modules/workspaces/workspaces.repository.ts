@@ -1,5 +1,6 @@
 import type { PrismaClient, Workspace, WorkspaceRole, Plan } from '@texly/db';
 import type { DbClient } from '../auth/types.js';
+import type { WorkspaceWithRoleDTO } from '@texly/shared';
 
 export interface UserWorkspaceSummary {
   id: string;
@@ -62,5 +63,47 @@ export class WorkspacesRepository {
     });
 
     return member?.workspace ?? null;
+  }
+
+  async findWorkspacesWithUsage(userId: string): Promise<WorkspaceWithRoleDTO[]> {
+    const members = await this.prisma.workspaceMember.findMany({
+      where: {
+        userId,
+        workspace: {
+          deletedAt: null,
+        },
+      },
+      include: {
+        workspace: {
+          include: {
+            projects: {
+              where: { trashedAt: null },
+              select: { storageBytes: true },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    return members.map((m) => {
+      let totalStorageBytes = 0;
+      for (const p of m.workspace.projects) {
+        totalStorageBytes += Number(p.storageBytes);
+      }
+      return {
+        id: m.workspace.id,
+        name: m.workspace.name,
+        slug: m.workspace.slug,
+        role: m.role as WorkspaceWithRoleDTO['role'],
+        isPersonal: m.workspace.isPersonal,
+        usage: {
+          storageBytes: totalStorageBytes,
+          quota: 50 * 1024 * 1024,
+        },
+      };
+    });
   }
 }
