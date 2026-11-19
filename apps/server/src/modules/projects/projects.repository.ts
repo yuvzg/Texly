@@ -222,12 +222,24 @@ export class ProjectsRepository {
       throw new AppError(ErrorCodeEnum.FORBIDDEN, 403, 'Only project owners can delete this project.');
     }
 
-    await this.prisma.project.update({
-      where: { id: projectId },
-      data: {
-        trashedAt: new Date(),
-      },
-    });
+    await this.prisma.$transaction([
+      this.prisma.project.update({
+        where: { id: projectId },
+        data: {
+          trashedAt: new Date(),
+        },
+      }),
+      this.prisma.compilation.updateMany({
+        where: {
+          projectId,
+          status: { in: ['QUEUED', 'RUNNING'] },
+        },
+        data: {
+          status: 'CANCELLED',
+          finishedAt: new Date(),
+        },
+      }),
+    ]);
   }
 
   private mapToDTO(project: Project, role?: ProjectRole): ProjectDTO {

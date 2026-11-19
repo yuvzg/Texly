@@ -17,12 +17,21 @@ export function startApiServer() {
     corsAllowedOrigins: env.CORS_ALLOWED_ORIGINS,
   });
 
+  if (env.NODE_ENV === 'development') {
+    container.compilationsWorker.start();
+    container.compilationsReconciler.start();
+  }
+
   const server = httpServer.listen(env.PORT, env.HOST, () => {
     logger.info({ port: env.PORT, host: env.HOST, env: env.NODE_ENV }, 'API server started');
   });
 
   const shutdown = (signal: string) => {
     logger.info({ signal }, 'Received shutdown signal, closing API server gracefully');
+    if (env.NODE_ENV === 'development') {
+      container.compilationsReconciler.stop();
+      void container.compilationsWorker.close();
+    }
     server.close(() => {
       logger.info('HTTP server closed');
       process.exit(0);

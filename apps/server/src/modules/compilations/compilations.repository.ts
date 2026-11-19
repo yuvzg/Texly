@@ -192,7 +192,23 @@ export class CompilationsRepository {
       where: {
         requestedById: userId,
         status: { in: ['QUEUED', 'RUNNING'] },
+        project: {
+          trashedAt: null,
+        },
       },
+    });
+  }
+
+  public async findActiveByUser(userId: string): Promise<Compilation[]> {
+    return this.prisma.compilation.findMany({
+      where: {
+        requestedById: userId,
+        status: { in: ['QUEUED', 'RUNNING'] },
+        project: {
+          trashedAt: null,
+        },
+      },
+      orderBy: { queuedAt: 'asc' },
     });
   }
 

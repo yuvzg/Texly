@@ -58,10 +58,10 @@ export class CompilationsReconciler {
 
     for (const comp of staleQueued) {
       const jobState = await this.compileQueueService.getJobState(comp.id);
-      if (!jobState) {
+      if (!jobState || jobState === 'failed' || jobState === 'completed') {
         logger.warn(
-          { compilationId: comp.id, projectId: comp.projectId },
-          'Stale QUEUED compilation found with no BullMQ job. Marking FAILED(INFRA)',
+          { compilationId: comp.id, projectId: comp.projectId, jobState },
+          'Stale QUEUED compilation found with dead or missing BullMQ job. Marking FAILED(INFRA)',
         );
         await this.compilationsRepo.update(comp.id, {
           status: 'FAILED',

@@ -217,13 +217,32 @@ export class CompilationsService {
     }
 
     // Enforce concurrent compilations per user
-    const activeUserCompilations = await this.compilationsRepo.countActiveByUser(userId);
+    let activeUserCompilations = await this.compilationsRepo.countActiveByUser(userId);
     if (activeUserCompilations >= limits.concurrentCompilesPerUser) {
-      throw new AppError(
-        ErrorCodeEnum.COMPILE_LIMIT,
-        409,
-        `Maximum concurrent compilations (${limits.concurrentCompilesPerUser}) reached.`,
-      );
+      // Self-heal: check if active user compilations are dead/orphaned in the queue
+      const activeComps = await this.compilationsRepo.findActiveByUser(userId);
+      for (const comp of activeComps) {
+        const state = await this.compileQueueService.getJobState(comp.id);
+        if (!state || state === 'failed' || state === 'completed') {
+          logger.warn(
+            { compilationId: comp.id, projectId: comp.projectId, state },
+            'Self-healing: cleaning up orphaned active compilation',
+          );
+          await this.compilationsRepo.update(comp.id, {
+            status: 'FAILED',
+            errorCode: 'ORPHANED_QUEUED_JOB',
+            finishedAt: new Date(),
+          });
+        }
+      }
+      activeUserCompilations = await this.compilationsRepo.countActiveByUser(userId);
+      if (activeUserCompilations >= limits.concurrentCompilesPerUser) {
+        throw new AppError(
+          ErrorCodeEnum.COMPILE_LIMIT,
+          409,
+          `Maximum concurrent compilations (${limits.concurrentCompilesPerUser}) reached.`,
+        );
+      }
     }
 
     // Enforce 10-minute compile rate limit
