@@ -6,6 +6,8 @@ import {
   DeleteObjectCommand,
   CopyObjectCommand,
   ListObjectsV2Command,
+  HeadBucketCommand,
+  CreateBucketCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type {
@@ -39,6 +41,18 @@ export class S3StorageService implements StorageService {
       },
       forcePathStyle: config.forcePathStyle ?? true,
     });
+  }
+
+  public async ensureBucketExists(): Promise<void> {
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+    } catch {
+      try {
+        await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+      } catch {
+        // Bucket may have been created concurrently or already exists
+      }
+    }
   }
 
   public readonly buildKey = {

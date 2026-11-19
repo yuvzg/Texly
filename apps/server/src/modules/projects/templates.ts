@@ -270,3 +270,4 @@ function escapeLatex(text: string): string {
     .replace(/[{}]/g, '\\$&')
     .replace(/[$%_&#^]/g, '\\$&');
 }
+

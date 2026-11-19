@@ -34,3 +34,4 @@ export async function fetchProject(projectId: string): Promise<ProjectDTO> {
 export async function createProject(data: CreateProjectRequest): Promise<ProjectDTO> {
   return apiClient.post<ProjectDTO>('/projects', data);
 }
+

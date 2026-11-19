@@ -124,7 +124,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
   } else if (currentEnv.STORAGE_DRIVER === 'memory' || currentEnv.NODE_ENV === 'test') {
     storageService = new MemoryStorageService(currentEnv.S3_PROJECTS_BUCKET);
   } else {
-    storageService = new S3StorageService({
+    const s3 = new S3StorageService({
       endpoint: currentEnv.S3_ENDPOINT,
       region: currentEnv.S3_REGION,
       accessKeyId: currentEnv.S3_ACCESS_KEY_ID,
@@ -132,6 +132,8 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
       bucket: currentEnv.S3_PROJECTS_BUCKET,
       forcePathStyle: currentEnv.S3_FORCE_PATH_STYLE,
     });
+    void s3.ensureBucketExists();
+    storageService = s3;
   }
 
   // Realtime & Queue Services

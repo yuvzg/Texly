@@ -135,12 +135,42 @@ export class CompilationsWorker {
     let finalStatus = result.status;
     let errorCode = result.errorCode;
 
+    const workspaceId = (compilation as { project?: { workspaceId: string } | null }).project?.workspaceId;
+    const expectedPdfKey = workspaceId
+      ? this.storageService.buildKey.compilation(
+          workspaceId,
+          compilation.projectId,
+          compilation.id,
+          'output.pdf',
+        )
+      : null;
+    const expectedSynctexKey = workspaceId
+      ? this.storageService.buildKey.compilation(
+          workspaceId,
+          compilation.projectId,
+          compilation.id,
+          'output.synctex.gz',
+        )
+      : null;
+    const expectedLogKey = workspaceId
+      ? this.storageService.buildKey.compilation(
+          workspaceId,
+          compilation.projectId,
+          compilation.id,
+          'compile.log',
+        )
+      : null;
+
+    const actualPdfKey = result.outputs.pdfKey && expectedPdfKey ? expectedPdfKey : null;
+    const actualSynctexKey = result.outputs.synctexKey && expectedSynctexKey ? expectedSynctexKey : null;
+    const actualLogKey = result.outputs.logKey && expectedLogKey ? expectedLogKey : null;
+
     // Verify uploaded artifacts via HEAD requests
-    if (finalStatus === 'SUCCEEDED' && result.outputs.pdfKey) {
-      const head = await this.storageService.head(result.outputs.pdfKey);
+    if (finalStatus === 'SUCCEEDED' && actualPdfKey) {
+      const head = await this.storageService.head(actualPdfKey);
       if (!head || head.sizeBytes === 0) {
         logger.error(
-          { compilationId, pdfKey: result.outputs.pdfKey },
+          { compilationId, pdfKey: actualPdfKey },
           'PDF artifact missing or empty after compilation succeeded, marking FAILED(INFRA)',
         );
         finalStatus = 'FAILED';
@@ -159,12 +189,12 @@ export class CompilationsWorker {
           durationMs: result.durationMs,
           exitCode: result.exitCode,
           errorCode: errorCode ?? null,
-          pdfKey: result.outputs.pdfKey ?? null,
+          pdfKey: finalStatus === 'SUCCEEDED' ? actualPdfKey : null,
           pdfSizeBytes:
             result.outputSizes.pdfBytes !== undefined ? BigInt(result.outputSizes.pdfBytes) : null,
           pageCount: result.pageCount ?? null,
-          synctexKey: result.outputs.synctexKey ?? null,
-          logKey: result.outputs.logKey ?? null,
+          synctexKey: actualSynctexKey,
+          logKey: actualLogKey,
           errorCount: result.errorCount,
           warningCount: result.warningCount,
         },
@@ -199,7 +229,7 @@ export class CompilationsWorker {
       durationMs: result.durationMs,
       errorCount: result.errorCount,
       warningCount: result.warningCount,
-      hasPdf: !!result.outputs.pdfKey,
+      hasPdf: finalStatus === 'SUCCEEDED' && !!actualPdfKey,
       timestamp: finishedAt.toISOString(),
     });
 

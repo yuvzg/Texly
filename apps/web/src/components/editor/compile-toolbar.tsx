@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, Loader2, Download, History, Ban, AlertTriangle, X } from 'lucide-react';
-import type { Engine } from '@texly/shared';
+import type { Engine, CompilationDTO } from '@texly/shared';
 import { Button } from '@/components/ui/button';
 import { CompileStatusChip } from './compile-status-chip';
 import { CompilationHistoryModal } from './compilation-history-modal';
@@ -12,6 +12,11 @@ export interface CompileToolbarProps {
   defaultEngine?: Engine;
   onFlushSave?: () => Promise<boolean>;
   onCompileSuccess?: () => void;
+  onCompilationChange?: (
+    current: CompilationDTO | null,
+    lastSuccess: CompilationDTO | null,
+    isCompiling: boolean,
+  ) => void;
   className?: string;
 }
 
@@ -20,6 +25,7 @@ export function CompileToolbar({
   defaultEngine = 'PDFLATEX',
   onFlushSave,
   onCompileSuccess,
+  onCompilationChange,
   className,
 }: CompileToolbarProps) {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -47,6 +53,10 @@ export function CompileToolbar({
       onCompileSuccess?.();
     },
   });
+
+  useEffect(() => {
+    onCompilationChange?.(currentCompilation, lastSuccessfulCompilation, isCompiling);
+  }, [currentCompilation, lastSuccessfulCompilation, isCompiling, onCompilationChange]);
 
   const isBusy = isCompiling || isSaving;
   const canCancel =

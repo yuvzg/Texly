@@ -80,6 +80,8 @@ export class DockerManager {
         'TEXMFHOME=/tmp/texmf-home',
         'HOME=/tmp',
         'SOURCE_DATE_EPOCH=1700000000',
+        'TEXINPUTS=/work/src//::',
+        'BIBINPUTS=/work/src//::',
       ],
       Labels: {
         'texly.job': job.compilationId,
