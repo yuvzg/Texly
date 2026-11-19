@@ -85,7 +85,7 @@ export function CompileToolbar({
             variant="outline"
             onClick={cancel}
             data-testid="cancel-compile-button"
-            className="h-8 px-2.5 text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
+            className="h-8 px-2.5 text-xs text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40 hover:bg-rose-50 dark:hover:bg-rose-950/40"
             title="Cancel running compilation"
           >
             <Ban className="h-3.5 w-3.5 mr-1" />
@@ -100,10 +100,10 @@ export function CompileToolbar({
             variant="outline"
             onClick={() => downloadPdf()}
             data-testid="download-pdf-button"
-            className="h-8 px-2.5 text-xs text-gray-700 hover:bg-gray-50"
+            className="h-8 px-2.5 text-xs text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[#00D69A]/20 hover:bg-gray-50 dark:hover:bg-[#003D30]/60"
             title="Download latest generated PDF"
           >
-            <Download className="h-3.5 w-3.5 mr-1 text-gray-600" />
+            <Download className="h-3.5 w-3.5 mr-1 text-gray-600 dark:text-[#00D69A]" />
             PDF
           </Button>
         )}
@@ -117,7 +117,7 @@ export function CompileToolbar({
             setIsHistoryOpen(true);
           }}
           data-testid="history-button"
-          className="h-8 px-2 text-gray-500 hover:text-gray-700"
+          className="h-8 px-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-[#00D69A] hover:bg-gray-100 dark:hover:bg-[#003D30]/40"
           title="Compilation history"
         >
           <History className="h-3.5 w-3.5" />
@@ -130,7 +130,7 @@ export function CompileToolbar({
           onClick={() => compile()}
           disabled={isBusy}
           data-testid="compile-button"
-          className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+          className="flex items-center gap-1.5 bg-[#00D69A] hover:bg-[#00BF89] text-[#050807] font-semibold shadow-[0_0_15px_rgba(0,214,154,0.25)] hover:shadow-[0_0_20px_rgba(0,214,154,0.35)] transition-all cursor-pointer"
           title="Compile document (Mod-Enter)"
         >
           {isSaving ? (
@@ -147,7 +147,7 @@ export function CompileToolbar({
             <>
               <Play className="h-3.5 w-3.5 fill-current" />
               <span>Compile</span>
-              <kbd className="hidden sm:inline-block ml-1 px-1 py-0.2 text-[10px] bg-emerald-700/60 rounded text-emerald-100 font-mono">
+              <kbd className="hidden sm:inline-block ml-1 px-1 py-0.2 text-[10px] bg-black/20 rounded text-[#050807] font-mono font-bold">
                 ⌘↵
               </kbd>
             </>
@@ -159,15 +159,15 @@ export function CompileToolbar({
       {errorMessage && (
         <div
           data-testid="compilation-error-banner"
-          className="flex items-center justify-between px-3 py-1.5 text-xs bg-rose-50 border border-rose-200 text-rose-800 rounded-md mt-1 animate-in fade-in duration-200"
+          className="flex items-center justify-between px-3 py-1.5 text-xs bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-200 rounded-md mt-1 animate-in fade-in duration-200"
         >
           <div className="flex items-center gap-1.5 overflow-hidden">
-            <AlertTriangle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+            <AlertTriangle className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
             <span className="truncate">{errorMessage}</span>
           </div>
           <button
             onClick={clearError}
-            className="p-0.5 text-rose-600 hover:text-rose-800 rounded ml-2 cursor-pointer"
+            className="p-0.5 text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-200 rounded ml-2 cursor-pointer"
           >
             <X className="h-3.5 w-3.5" />
           </button>

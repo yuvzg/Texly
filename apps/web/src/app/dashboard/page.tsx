@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Plus,
-  FolderGit2,
   Clock,
   FileCode,
   Settings,
@@ -16,13 +15,20 @@ import {
   Layers,
   ChevronRight,
   FolderPlus,
+  Search,
+  Menu,
+  X,
+  FileText,
+  Briefcase,
+  Sliders,
+  CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProtectedRoute } from '@/components/auth/route-guards';
 import { useAuth } from '@/providers/auth-provider';
-import { ThemeToggle } from '@/providers/theme-provider';
 import { fetchProjects } from '@/lib/projects';
 import { NewProjectModal } from '@/components/dashboard/new-project-modal';
+import { TexlyLogo } from '@/components/common/texly-logo';
 import type { ProjectDTO } from '@texly/shared';
 
 export default function DashboardPage() {
@@ -33,6 +39,8 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectDTO[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   const personalWorkspace = workspaces.find((w) => w.isPersonal);
   const defaultWorkspaceId = personalWorkspace?.id || workspaces[0]?.id;
@@ -92,206 +100,327 @@ export default function DashboardPage() {
     }
   };
 
+  const activeWorkspaceName = useMemo(() => {
+    if (!selectedWorkspaceId) return 'All Workspaces';
+    const ws = workspaces.find((w) => w.id === selectedWorkspaceId);
+    return ws ? ws.name : 'Workspace';
+  }, [workspaces, selectedWorkspaceId]);
+
+  const filteredProjects = useMemo(() => {
+    if (!searchQuery.trim()) return projects;
+    const q = searchQuery.toLowerCase();
+    return projects.filter(
+      (p) => p.name.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q),
+    );
+  }, [projects, searchQuery]);
+
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex flex-col">
-        {/* Navigation Bar */}
-        <header className="h-16 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-100 dark:border-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400">
-              <FolderGit2 className="h-5 w-5" />
+      <div className="min-h-screen bg-[#050807] bg-texly-glow text-[#ECFDF5] flex relative overflow-x-hidden">
+        {/* Mobile Navigation Drawer Overlay */}
+        {isMobileDrawerOpen && (
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 lg:hidden"
+            onClick={() => setIsMobileDrawerOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Sidebar: Desktop fixed, Mobile slide-out drawer */}
+        <aside
+          className={`fixed lg:sticky top-0 h-screen w-64 bg-[#0A1310] border-r border-[#00D69A]/15 flex flex-col z-50 transition-transform duration-200 ease-in-out ${
+            isMobileDrawerOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
+        >
+          {/* Sidebar Header */}
+          <div className="h-16 border-b border-[#00D69A]/15 px-6 flex items-center justify-between">
+            <Link href="/" className="inline-block" onClick={() => setIsMobileDrawerOpen(false)}>
+              <TexlyLogo size="md" subtitle="LaTeX Editor" />
+            </Link>
+            <button
+              onClick={() => setIsMobileDrawerOpen(false)}
+              className="lg:hidden p-1.5 text-[#94A3B8] hover:text-white rounded-lg focus:outline-none"
+              aria-label="Close navigation drawer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Navigation Links */}
+          <div className="p-4 space-y-1">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#003D30] text-[#00D69A] font-semibold text-sm border border-[#00D69A]/30 shadow-[0_0_15px_rgba(0,61,48,0.5)]"
+              onClick={() => setIsMobileDrawerOpen(false)}
+            >
+              <FileText className="h-4 w-4" />
+              <span>Projects</span>
+            </Link>
+            <Link
+              href="/dashboard/settings"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#94A3B8] hover:text-white hover:bg-[#003D30]/40 transition-colors text-sm font-medium"
+              onClick={() => setIsMobileDrawerOpen(false)}
+            >
+              <Sliders className="h-4 w-4" />
+              <span>Settings</span>
+            </Link>
+          </div>
+
+          {/* Workspaces Section */}
+          <div className="px-4 py-3 flex-1 overflow-y-auto">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#94A3B8]/70 px-2 mb-2">
+              <span>Workspaces</span>
+              <span className="text-[10px] bg-[#003D30] text-[#00D69A] px-1.5 py-0.5 rounded-full">
+                {workspaces.length}
+              </span>
             </div>
-            <div>
-              <span className="font-bold text-gray-900 dark:text-gray-100 block leading-none">Texly</span>
-              <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">LaTeX Editor</span>
+
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  setSelectedWorkspaceId(undefined);
+                  setIsMobileDrawerOpen(false);
+                }}
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all text-left ${
+                  selectedWorkspaceId === undefined
+                    ? 'bg-[#003D30]/80 text-[#00D69A] border border-[#00D69A]/30'
+                    : 'text-[#94A3B8] hover:text-white hover:bg-[#003D30]/30'
+                }`}
+              >
+                <div className="h-6 w-6 rounded-md bg-[#003D30] text-[#00D69A] flex items-center justify-center font-bold text-[10px]">
+                  ALL
+                </div>
+                <span className="truncate">All Workspaces</span>
+              </button>
+
+              {workspaces.map((w) => {
+                const isSelected = selectedWorkspaceId === w.id;
+                const initial = w.name.charAt(0).toUpperCase();
+                return (
+                  <button
+                    key={w.id}
+                    onClick={() => {
+                      setSelectedWorkspaceId(w.id);
+                      setIsMobileDrawerOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all text-left ${
+                      isSelected
+                        ? 'bg-[#003D30]/80 text-[#00D69A] border border-[#00D69A]/30'
+                        : 'text-[#94A3B8] hover:text-white hover:bg-[#003D30]/30'
+                    }`}
+                  >
+                    <div className="h-6 w-6 rounded-md bg-[#003D30] text-[#00D69A] border border-[#00D69A]/20 flex items-center justify-center font-bold text-[11px]">
+                      {initial}
+                    </div>
+                    <span className="truncate">
+                      {w.name} {w.isPersonal ? '(Personal)' : ''}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {user && (
-              <div className="flex items-center gap-2.5 pr-2 border-r border-gray-200 dark:border-gray-800">
-                <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-xs shadow-xs">
+          {/* User profile footer */}
+          {user && (
+            <div className="p-4 border-t border-[#00D69A]/15 bg-[#08100D] flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-8 w-8 rounded-full bg-[#00D69A] text-[#050807] flex items-center justify-center font-bold text-xs shrink-0 shadow-[0_0_10px_rgba(0,214,154,0.4)]">
                   {user.name ? user.name.slice(0, 2).toUpperCase() : <User className="h-4 w-4" />}
                 </div>
-                <div className="hidden sm:block text-left">
+                <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-gray-900 dark:text-gray-100 leading-none">
-                      {user.name}
-                    </span>
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    <span className="text-xs font-semibold text-white truncate">{user.name}</span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30">
                       {plan}
                     </span>
                   </div>
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400 leading-none block mt-0.5">
-                    {user.email}
-                  </span>
+                  <span className="text-[11px] text-[#94A3B8] truncate block">{user.email}</span>
                 </div>
               </div>
-            )}
 
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => setIsNewProjectOpen(true)}
-              className="flex items-center gap-1.5"
-            >
-              <Plus className="h-4 w-4" /> New Project
-            </Button>
-
-            <ThemeToggle />
-
-            <Link href="/dashboard/settings" title="Settings">
               <button
-                className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors cursor-pointer"
-                aria-label="User settings"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="p-1.5 text-[#94A3B8] hover:text-rose-400 rounded-lg hover:bg-rose-950/40 transition-colors cursor-pointer"
+                title="Sign Out"
+                aria-label="Sign out"
               >
-                <Settings className="h-4 w-4" />
+                {isLoggingOut ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-[#94A3B8]" />
+                ) : (
+                  <LogOut className="h-4 w-4" />
+                )}
               </button>
-            </Link>
-
-            <button
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-colors cursor-pointer"
-              title="Sign Out"
-              aria-label="Sign out"
-            >
-              {isLoggingOut ? (
-                <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
-              ) : (
-                <LogOut className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="flex-1 p-8 max-w-5xl mx-auto w-full space-y-6">
-          {user && !user.emailVerified && (
-            <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2.5">
-                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-xs">
-                  <span className="font-semibold block">Your email address is unverified</span>
-                  <span>Please check your inbox at {user.email} for your verification link.</span>
-                </div>
-              </div>
-              <Link href="/verify-email">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs bg-white border-amber-300 text-amber-900"
-                >
-                  Verify Now
-                </Button>
-              </Link>
             </div>
           )}
+        </aside>
 
-          {/* Header & Workspace filter */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Your Projects</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Manage, edit and compile your LaTeX documents</p>
-            </div>
+        {/* Main Content Pane */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Top Bar */}
+          <header className="h-16 border-b border-[#00D69A]/15 px-4 sm:px-8 flex items-center justify-between gap-4 backdrop-blur-md bg-[#050807]/70 sticky top-0 z-30">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsMobileDrawerOpen(true)}
+                className="lg:hidden p-2 text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#003D30]/40 focus:outline-none"
+                aria-label="Open navigation menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
 
-            {workspaces.length > 1 && (
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-gray-400" />
-                <select
-                  value={selectedWorkspaceId || ''}
-                  onChange={(e) => setSelectedWorkspaceId(e.target.value || undefined)}
-                  className="h-8 px-2.5 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                >
-                  <option value="">All Workspaces</option>
-                  {workspaces.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name} {w.isPersonal ? '(Personal)' : ''}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-medium">
+                <span className="text-[#94A3B8] hidden sm:inline">Workspace</span>
+                <span className="text-[#94A3B8]/40 hidden sm:inline">/</span>
+                <span className="text-[#00D69A] font-semibold">{activeWorkspaceName}</span>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Project List */}
-          {isLoadingProjects ? (
-            <div className="p-12 flex flex-col items-center justify-center text-gray-400">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-2" />
-              <p className="text-sm">Loading projects...</p>
-            </div>
-          ) : projectsError ? (
-            <div className="p-6 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-sm flex items-center justify-between">
-              <span>{projectsError}</span>
-              <Button size="sm" variant="outline" onClick={loadProjects}>
-                Retry
-              </Button>
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="p-12 text-center bg-white dark:bg-gray-900 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl space-y-3">
-              <div className="h-12 w-12 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
-                <FolderPlus className="h-6 w-6" />
+            {/* Search Input & Action Button */}
+            <div className="flex items-center gap-3">
+              <div className="relative hidden sm:block w-48 md:w-64">
+                <Search className="h-3.5 w-3.5 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-[#0A1310] border border-[#00D69A]/20 text-[#ECFDF5] placeholder:text-[#94A3B8]/40 focus:outline-none focus:border-[#00D69A] focus:ring-1 focus:ring-[#00D69A]"
+                />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">No projects yet</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                Get started by creating your first LaTeX project with standard templates or a blank slate.
-              </p>
+
               <Button
                 size="sm"
-                variant="default"
                 onClick={() => setIsNewProjectOpen(true)}
-                className="mt-2"
+                className="flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,214,154,0.3)]"
               >
-                <Plus className="h-4 w-4 mr-1.5" /> Create Project
+                <Plus className="h-4 w-4" />
+                <span className="hidden xs:inline">New Project</span>
               </Button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/workspace?projectId=${p.id}`}
-                  className="group block p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-xs hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                        <FileCode className="h-4 w-4" />
-                      </div>
-                      <div className="max-w-[170px]">
-                        <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate" title={p.name}>
-                          {p.name}
-                        </h3>
-                        <span className="text-[10px] text-gray-400 font-mono">
-                          {formatEngine(p.engine)}
-                        </span>
-                      </div>
-                    </div>
-                    {p.role && (
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-medium">
-                        {p.role}
-                      </span>
-                    )}
-                  </div>
+          </header>
 
-                  {p.description && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 line-clamp-2">{p.description}</p>
-                  )}
-
-                  <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-1 text-[11px]">
-                      <Clock className="h-3 w-3" />
-                      <span>{new Date(p.updatedAt).toLocaleDateString()}</span>
-                    </div>
-                    <span className="text-blue-600 dark:text-blue-400 text-[11px] font-medium flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Open <ChevronRight className="h-3 w-3" />
-                    </span>
+          {/* Page Body */}
+          <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full space-y-6">
+            {user && !user.emailVerified && (
+              <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-800/60 text-amber-200 flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="text-xs">
+                    <span className="font-semibold block text-white">Your email address is unverified</span>
+                    <span>Please check your inbox at {user.email} for your verification link.</span>
                   </div>
+                </div>
+                <Link href="/verify-email">
+                  <Button size="sm" variant="outline" className="text-xs bg-amber-950/60 border-amber-600/40 text-amber-200">
+                    Verify Now
+                  </Button>
                 </Link>
-              ))}
+              </div>
+            )}
+
+            {/* Section Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
+                  <span>Projects</span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30">
+                    {filteredProjects.length}
+                  </span>
+                </h1>
+                <p className="text-xs sm:text-sm text-[#94A3B8] mt-1">
+                  Manage, edit and compile your LaTeX documents in isolated sandboxes
+                </p>
+              </div>
             </div>
-          )}
-        </main>
+
+            {/* Project List / Grid */}
+            {isLoadingProjects ? (
+              <div className="p-16 flex flex-col items-center justify-center text-[#94A3B8]">
+                <Loader2 className="h-8 w-8 animate-spin text-[#00D69A] mb-3" />
+                <p className="text-sm">Loading your workspaces & projects...</p>
+              </div>
+            ) : projectsError ? (
+              <div className="p-6 rounded-xl bg-rose-950/40 border border-rose-900/60 text-rose-200 text-sm flex items-center justify-between">
+                <span>{projectsError}</span>
+                <Button size="sm" variant="outline" onClick={loadProjects}>
+                  Retry
+                </Button>
+              </div>
+            ) : filteredProjects.length === 0 ? (
+              <div className="p-12 sm:p-16 text-center bg-[#0A1310] border border-dashed border-[#00D69A]/20 rounded-2xl space-y-4 shadow-[0_0_20px_rgba(0,61,48,0.2)]">
+                <div className="h-14 w-14 rounded-2xl bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(0,214,154,0.15)]">
+                  <FolderPlus className="h-7 w-7" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">No projects found</h3>
+                <p className="text-xs sm:text-sm text-[#94A3B8] max-w-sm mx-auto leading-relaxed">
+                  {searchQuery
+                    ? `No projects matched "${searchQuery}". Try a different keyword.`
+                    : 'Get started by creating your first LaTeX project with standard templates or a blank slate.'}
+                </p>
+                <Button
+                  size="default"
+                  onClick={() => setIsNewProjectOpen(true)}
+                  className="mt-2"
+                >
+                  <Plus className="h-4 w-4 mr-1.5" /> Create Project
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredProjects.map((p) => (
+                  <Link
+                    key={p.id}
+                    href={`/workspace?projectId=${p.id}`}
+                    className="group block p-5 rounded-2xl bg-[#0A1310] border border-[#00D69A]/15 hover:border-[#00D69A]/40 shadow-[0_0_15px_rgba(0,61,48,0.2)] hover:shadow-[0_0_25px_rgba(0,214,154,0.15)] transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-xl bg-[#003D30] text-[#00D69A] border border-[#00D69A]/20 flex items-center justify-center group-hover:bg-[#00D69A] group-hover:text-[#050807] transition-colors shadow-xs">
+                            <FileCode className="h-4.5 w-4.5" />
+                          </div>
+                          <div className="min-w-0 max-w-[180px]">
+                            <h3 className="font-semibold text-sm text-white truncate group-hover:text-[#00D69A] transition-colors" title={p.name}>
+                              {p.name}
+                            </h3>
+                            <span className="text-[10px] text-[#00D69A]/80 font-mono tracking-wider">
+                              {formatEngine(p.engine)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {p.role && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30 font-medium">
+                            {p.role}
+                          </span>
+                        )}
+                      </div>
+
+                      {p.description ? (
+                        <p className="text-xs text-[#94A3B8] mt-3 line-clamp-2 leading-relaxed">
+                          {p.description}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-[#94A3B8]/40 italic mt-3">No description provided</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-[#94A3B8] mt-5 pt-3 border-t border-[#00D69A]/10">
+                      <div className="flex items-center gap-1.5 text-[11px]">
+                        <Clock className="h-3 w-3 text-[#00D69A]/60" />
+                        <span>{new Date(p.updatedAt).toLocaleDateString()}</span>
+                      </div>
+                      <span className="text-[#00D69A] text-xs font-semibold flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                        Open <ChevronRight className="h-3.5 w-3.5" />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </main>
+        </div>
 
         {/* New Project Modal */}
         <NewProjectModal

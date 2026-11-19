@@ -64,17 +64,13 @@ export function NewProjectModal({
   workspaces,
   defaultWorkspaceId,
 }: NewProjectModalProps) {
-  const initialWorkspaceId =
-    defaultWorkspaceId ||
-    workspaces.find((w) => w.isPersonal)?.id ||
-    workspaces[0]?.id ||
-    '';
-
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [workspaceId, setWorkspaceId] = useState(initialWorkspaceId);
   const [template, setTemplate] = useState<ProjectTemplate>('blank');
   const [engine, setEngine] = useState<Engine>('PDFLATEX');
+  const [workspaceId, setWorkspaceId] = useState<string>(
+    defaultWorkspaceId || workspaces[0]?.id || '',
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,36 +78,38 @@ export function NewProjectModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
+    setError(null);
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       setError('Project name is required.');
       return;
     }
 
     if (!workspaceId) {
-      setError('Please select a valid workspace.');
+      setError('Please select a workspace for this project.');
       return;
     }
 
     setIsSubmitting(true);
-    setError(null);
-
     try {
       const project = await createProject({
         workspaceId,
-        name: name.trim(),
+        name: trimmedName,
         description: description.trim() || undefined,
         template,
         engine,
       });
-
+      setName('');
+      setDescription('');
+      setTemplate('blank');
+      setEngine('PDFLATEX');
       onSuccess(project);
     } catch (err: unknown) {
       if (err instanceof ApiClientError) {
         setError(err.message || 'Failed to create project');
-      } else if (err instanceof Error) {
-        setError(err.message);
       } else {
-        setError('An unexpected error occurred.');
+        setError('A network error occurred while creating project.');
       }
     } finally {
       setIsSubmitting(false);
@@ -119,32 +117,41 @@ export function NewProjectModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-      <div className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/50">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div className="relative w-full max-w-lg rounded-2xl bg-[#0A1310] border border-[#00D69A]/25 shadow-[0_0_50px_rgba(0,61,48,0.5)] overflow-hidden transition-all text-[#ECFDF5]">
+        {/* Header */}
+        <div className="h-16 px-6 border-b border-[#00D69A]/15 flex items-center justify-between bg-[#08100D]">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Create New Project</h2>
-            <p className="text-xs text-gray-500">Configure your LaTeX document and workspace</p>
+            <h2 id="modal-title" className="text-base sm:text-lg font-bold text-white leading-tight">
+              Create New Project
+            </h2>
+            <p className="text-[11px] text-[#94A3B8]">Initialize a new LaTeX document in your workspace</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1.5 text-[#94A3B8] hover:text-white rounded-lg hover:bg-[#003D30]/40 transition-colors"
+            aria-label="Close dialog"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
           {error && (
-            <div className="p-3 text-xs rounded-lg bg-rose-50 border border-rose-200 text-rose-700">
+            <div className="p-3 text-xs rounded-xl bg-rose-950/40 border border-rose-900/60 text-rose-200">
               {error}
             </div>
           )}
 
           {/* Project Name */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-700">
-              Project Name <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold text-white">
+              Project Name <span className="text-[#00D69A]">*</span>
             </label>
             <input
               type="text"
@@ -153,7 +160,7 @@ export function NewProjectModal({
               placeholder="e.g., Quantum Computing Notes"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-9 px-3 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+              className="w-full h-10 px-3 rounded-lg border border-[#00D69A]/20 bg-[#050807] text-[#ECFDF5] text-sm placeholder:text-[#94A3B8]/40 focus:outline-none focus:border-[#00D69A] focus:ring-1 focus:ring-[#00D69A] transition-colors"
               autoFocus
             />
           </div>
@@ -161,11 +168,11 @@ export function NewProjectModal({
           {/* Workspace selector if multiple */}
           {workspaces.length > 1 && (
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-gray-700">Workspace</label>
+              <label className="block text-xs font-semibold text-white">Target Workspace</label>
               <select
                 value={workspaceId}
                 onChange={(e) => setWorkspaceId(e.target.value)}
-                className="w-full h-9 px-3 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                className="w-full h-10 px-3 rounded-lg border border-[#00D69A]/20 bg-[#050807] text-[#ECFDF5] text-sm focus:outline-none focus:border-[#00D69A] focus:ring-1 focus:ring-[#00D69A]"
               >
                 {workspaces.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -178,20 +185,20 @@ export function NewProjectModal({
 
           {/* Description */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-700">Description (Optional)</label>
+            <label className="block text-xs font-semibold text-white">Description (Optional)</label>
             <input
               type="text"
               maxLength={1000}
               placeholder="Brief summary of document goals..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full h-9 px-3 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+              className="w-full h-10 px-3 rounded-lg border border-[#00D69A]/20 bg-[#050807] text-[#ECFDF5] text-sm placeholder:text-[#94A3B8]/40 focus:outline-none focus:border-[#00D69A] focus:ring-1 focus:ring-[#00D69A] transition-colors"
             />
           </div>
 
           {/* Template Selection */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-700">Choose Template</label>
+            <label className="block text-xs font-semibold text-white">Choose Template</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto p-0.5">
               {TEMPLATES.map((t) => {
                 const Icon = t.icon;
@@ -201,20 +208,20 @@ export function NewProjectModal({
                     type="button"
                     key={t.id}
                     onClick={() => setTemplate(t.id)}
-                    className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all relative cursor-pointer ${
+                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all relative cursor-pointer ${
                       isSelected
-                        ? 'border-blue-600 bg-blue-50/60 ring-1 ring-blue-600'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                        ? 'border-[#00D69A] bg-[#003D30]/70 ring-1 ring-[#00D69A] shadow-[0_0_15px_rgba(0,214,154,0.15)]'
+                        : 'border-[#00D69A]/15 hover:border-[#00D69A]/30 bg-[#08120F]'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
-                      <Icon className={`h-4 w-4 ${isSelected ? 'text-blue-600' : 'text-gray-500'}`} />
-                      {isSelected && <Check className="h-3.5 w-3.5 text-blue-600" />}
+                      <Icon className={`h-4 w-4 ${isSelected ? 'text-[#00D69A]' : 'text-[#94A3B8]'}`} />
+                      {isSelected && <Check className="h-3.5 w-3.5 text-[#00D69A]" />}
                     </div>
-                    <span className="text-xs font-semibold text-gray-900 leading-tight">
+                    <span className="text-xs font-semibold text-white leading-tight">
                       {t.name}
                     </span>
-                    <span className="text-[11px] text-gray-500 leading-tight mt-0.5 line-clamp-2">
+                    <span className="text-[11px] text-[#94A3B8] leading-tight mt-0.5 line-clamp-2">
                       {t.description}
                     </span>
                   </button>
@@ -223,48 +230,44 @@ export function NewProjectModal({
             </div>
           </div>
 
-          {/* Compilation Engine */}
+          {/* Engine Selection */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-700">LaTeX Engine</label>
+            <label className="block text-xs font-semibold text-white">LaTeX Engine</label>
             <div className="grid grid-cols-3 gap-2">
-              {(
-                [
-                  { id: 'PDFLATEX', label: 'pdfLaTeX', desc: 'Standard & fast' },
-                  { id: 'XELATEX', label: 'XeLaTeX', desc: 'Unicode & modern fonts' },
-                  { id: 'LUALATEX', label: 'LuaLaTeX', desc: 'Advanced scripting' },
-                ] as const
-              ).map((eng) => (
+              {(['PDFLATEX', 'XELATEX', 'LUALATEX'] as Engine[]).map((eng) => (
                 <button
                   type="button"
-                  key={eng.id}
-                  onClick={() => setEngine(eng.id)}
-                  className={`px-3 py-2 rounded-lg border text-left cursor-pointer transition-colors ${
-                    engine === eng.id
-                      ? 'border-blue-600 bg-blue-50/50 text-blue-900 font-medium'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-300 bg-white'
+                  key={eng}
+                  onClick={() => setEngine(eng)}
+                  className={`h-9 px-2 text-xs font-medium rounded-lg border text-center transition-all cursor-pointer ${
+                    engine === eng
+                      ? 'border-[#00D69A] bg-[#003D30] text-[#00D69A] font-semibold ring-1 ring-[#00D69A]'
+                      : 'border-[#00D69A]/15 bg-[#08120F] text-[#94A3B8] hover:text-white'
                   }`}
                 >
-                  <div className="text-xs font-semibold">{eng.label}</div>
-                  <div className="text-[10px] text-gray-500">{eng.desc}</div>
+                  {eng === 'PDFLATEX' ? 'pdfLaTeX' : eng === 'XELATEX' ? 'XeLaTeX' : 'LuaLaTeX'}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-200">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
+          {/* Buttons */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#00D69A]/15">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={isSubmitting || !name.trim()}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                  Creating...
-                </>
-              ) : (
-                'Create Project'
-              )}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex items-center gap-2 shadow-[0_0_15px_rgba(0,214,154,0.3)]"
+            >
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin text-[#050807]" />}
+              {isSubmitting ? 'Creating Project...' : 'Create & Open Project'}
             </Button>
           </div>
         </form>

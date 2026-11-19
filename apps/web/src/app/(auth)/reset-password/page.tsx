@@ -71,10 +71,10 @@ function ResetPasswordContent() {
 
   if (!token && !isSuccess) {
     return (
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">Reset your password</h2>
-          <p className="text-sm text-gray-500">A valid reset token is required</p>
+      <div className="space-y-5">
+        <div className="space-y-1 text-center sm:text-left">
+          <h2 className="text-2xl font-bold tracking-tight text-white">Reset your password</h2>
+          <p className="text-sm text-[#94A3B8]">A valid reset token is required</p>
         </div>
         <AuthAlert
           variant="error"
@@ -92,10 +92,10 @@ function ResetPasswordContent() {
 
   return (
     <GuestOnlyRoute>
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">Set new password</h2>
-          <p className="text-sm text-gray-500">
+      <div className="space-y-5">
+        <div className="space-y-1 text-center sm:text-left">
+          <h2 className="text-2xl font-bold tracking-tight text-white">Set new password</h2>
+          <p className="text-sm text-[#94A3B8]">
             Create a secure new password for your Texly account
           </p>
         </div>
@@ -118,7 +118,7 @@ function ResetPasswordContent() {
             </div>
           </div>
         ) : (
-          <form className="space-y-3" onSubmit={handleSubmit} noValidate>
+          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             <FormField
               id="password"
               label="New Password"
@@ -157,18 +157,19 @@ function ResetPasswordContent() {
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isSubmitting ? 'Updating Password...' : 'Reset Password'}
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin text-[#050807]" />}
+              {isSubmitting ? 'Resetting password...' : 'Reset password'}
             </Button>
 
-            <p className="text-center text-xs text-gray-500 pt-1">
+            <div className="text-center pt-2 border-t border-[#00D69A]/10">
               <Link
                 href="/login"
-                className="text-blue-600 font-medium hover:underline inline-flex items-center gap-1"
+                className="inline-flex items-center gap-1.5 text-xs text-[#00D69A] hover:underline"
               >
-                <ArrowLeft className="h-3 w-3" /> Back to sign in
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back to sign in
               </Link>
-            </p>
+            </div>
           </form>
         )}
       </div>
@@ -180,8 +181,9 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+        <div className="p-8 text-center text-sm text-[#94A3B8]">
+          <Loader2 className="h-6 w-6 animate-spin text-[#00D69A] mx-auto mb-2" />
+          Loading...
         </div>
       }
     >

@@ -16,12 +16,15 @@ import {
   ExternalLink,
   AlertCircle,
   Download,
+  Code2,
+  ChevronRight,
 } from 'lucide-react';
 import type { ImperativePanelHandle } from 'react-resizable-panels';
 import { Button } from '@/components/ui/button';
 import { ProtectedRoute } from '@/components/auth/route-guards';
 import { CompileToolbar } from '@/components/editor/compile-toolbar';
 import { SaveStatusIndicator } from '@/components/editor/save-status-indicator';
+import { TexlyLogo } from '@/components/common/texly-logo';
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -168,6 +171,8 @@ function WorkspaceContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const [mobileTab, setMobileTab] = useState<'files' | 'editor' | 'pdf'>('editor');
+
   const toggleSidebar = () => {
     const panel = sidebarRef.current;
     if (panel) {
@@ -194,25 +199,171 @@ function WorkspaceContent() {
     }
   };
 
+  // Reusable File Sidebar Component
+  const renderSidebarContent = () => (
+    <div className="flex flex-col h-full bg-white dark:bg-[#0A1310] border-r border-gray-200 dark:border-[#00D69A]/15">
+      <div className="p-3 border-b border-gray-200 dark:border-[#00D69A]/15 flex items-center justify-between font-medium text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-[#050807]/50">
+        <span className="flex items-center gap-2 font-semibold">
+          <Files className="h-4 w-4 text-[#00D69A]" /> Project Files
+        </span>
+        <span className="text-[10px] text-gray-400 dark:text-[#00D69A]/50 lowercase">latex</span>
+      </div>
+      <div className="p-2 space-y-1 text-sm overflow-y-auto flex-1">
+        <div className="px-3 py-2 rounded-lg bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30 font-medium cursor-pointer text-xs flex items-center gap-2.5 shadow-[0_0_10px_rgba(0,214,154,0.08)]">
+          <FileText className="h-4 w-4 text-[#00D69A] shrink-0" />
+          <span className="truncate">{document?.path || 'main.tex'}</span>
+        </div>
+        <div className="px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#0C1814] text-gray-700 dark:text-gray-300 cursor-pointer text-xs flex items-center gap-2.5 transition-colors">
+          <FileText className="h-4 w-4 text-gray-400 dark:text-gray-500 shrink-0" />
+          <span className="truncate">references.bib</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Reusable Editor Content Component
+  const renderEditorContent = () => (
+    <div className="flex flex-col h-full bg-white dark:bg-[#050807]">
+      <div className="h-9 border-b border-gray-200 dark:border-[#00D69A]/15 px-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-[#0A1310]">
+        <div className="flex items-center gap-2">
+          <Code2 className="h-3.5 w-3.5 text-[#00D69A]" />
+          <span className="font-medium text-gray-800 dark:text-gray-200">
+            {document?.path || 'main.tex'}
+          </span>
+        </div>
+        <span className="text-[11px] text-gray-400 dark:text-gray-500">
+          {document ? `Rev ${document.revision} • LaTeX • UTF-8` : 'LaTeX • UTF-8'}
+        </span>
+      </div>
+      <div className="flex-1 p-4 font-mono text-xs overflow-auto text-gray-800 dark:text-gray-100 bg-white dark:bg-[#050807] relative">
+        {isLoading ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-[#050807]/80">
+            <Loader2 className="h-6 w-6 animate-spin text-[#00D69A]" />
+          </div>
+        ) : (
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="w-full h-full resize-none font-mono text-xs leading-relaxed outline-none border-none p-0 focus:ring-0 bg-transparent text-gray-900 dark:text-[#E2E8F0] placeholder-gray-400 dark:placeholder-gray-600"
+            spellCheck={false}
+            placeholder="Enter LaTeX document content..."
+          />
+        )}
+      </div>
+    </div>
+  );
+
+  // Reusable PDF Preview Component
+  const renderPdfContent = () => (
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-[#050807] overflow-hidden">
+      {/* PDF Viewer Header */}
+      <div className="h-9 border-b border-gray-200 dark:border-[#00D69A]/15 px-3 flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-[#0A1310]">
+        <span className="font-medium flex items-center gap-1.5">
+          <FileText className="h-3.5 w-3.5 text-[#00D69A]" /> PDF Preview
+          {pageCount && (
+            <span className="text-[11px] font-normal text-gray-400 dark:text-[#00D69A]/60">
+              ({pageCount} page{pageCount > 1 ? 's' : ''})
+            </span>
+          )}
+        </span>
+        <div className="flex items-center gap-2">
+          {pdfUrl && (
+            <>
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-[#00D69A] hover:underline flex items-center gap-1 font-medium"
+                title="Open PDF in new tab"
+              >
+                <ExternalLink className="h-3 w-3" /> Pop out
+              </a>
+              <a
+                href={pdfUrl}
+                download={`${project?.name || 'document'}.pdf`}
+                className="text-[11px] text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-[#00D69A] flex items-center gap-1 p-1 rounded"
+                title="Download PDF"
+              >
+                <Download className="h-3.5 w-3.5" />
+              </a>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* PDF Viewer Content Area */}
+      <div className="flex-1 relative flex flex-col items-center justify-center bg-gray-100 dark:bg-[#050807] overflow-hidden p-4">
+        {isCompiling ? (
+          <div className="flex flex-col items-center justify-center p-6 text-center rounded-2xl bg-white dark:bg-[#0A1310] border border-gray-200 dark:border-[#00D69A]/20 shadow-[0_0_20px_rgba(0,214,154,0.08)] max-w-sm">
+            <Loader2 className="h-8 w-8 animate-spin text-[#00D69A] mb-3" />
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+              Compiling document...
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Executing LaTeX engine inside container sandbox
+            </p>
+          </div>
+        ) : isLoadingPdf ? (
+          <div className="flex flex-col items-center justify-center p-6 text-center">
+            <Loader2 className="h-6 w-6 animate-spin text-[#00D69A] mb-2" />
+            <p className="text-xs text-gray-500 dark:text-gray-400">Loading PDF preview...</p>
+          </div>
+        ) : pdfUrl ? (
+          <iframe
+            src={pdfUrl}
+            className="w-full h-full border-0 bg-white rounded-lg shadow-sm"
+            title="Compiled PDF Preview"
+          />
+        ) : currentCompilation?.status === 'FAILED' ? (
+          <div className="border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 rounded-2xl p-6 max-w-sm text-center shadow-lg">
+            <AlertCircle className="h-8 w-8 text-rose-500 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-rose-800 dark:text-rose-200 mb-1">
+              Compilation Failed
+            </p>
+            <p className="text-xs text-rose-600 dark:text-rose-400">
+              {currentCompilation.errorCount > 0
+                ? `${currentCompilation.errorCount} error(s) found during compilation. Check the error log.`
+                : 'LaTeX process exited with errors. Check log.'}
+            </p>
+          </div>
+        ) : (
+          <div className="border border-dashed border-gray-300 dark:border-[#00D69A]/20 rounded-2xl p-8 max-w-sm text-center bg-white dark:bg-[#0A1310] shadow-sm">
+            <FileText className="h-8 w-8 text-gray-400 dark:text-[#00D69A]/60 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">
+              No PDF preview yet
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Trigger a compilation using{' '}
+              <kbd className="font-mono bg-gray-100 dark:bg-[#003D30] text-gray-800 dark:text-[#00D69A] px-1.5 py-0.5 rounded text-[11px] border border-gray-200 dark:border-[#00D69A]/30">
+                Mod-Enter
+              </kbd>{' '}
+              or the Compile button above.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-950 overflow-hidden">
+    <div className="h-screen flex flex-col bg-gray-100 dark:bg-[#050807] overflow-hidden">
       {/* Top Navigation Bar */}
-      <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 flex items-center justify-between">
+      <header className="h-14 bg-white dark:bg-[#050807] border-b border-gray-200 dark:border-[#00D69A]/15 px-3 sm:px-4 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/dashboard"
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-[#00D69A] p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#003D30]/40 transition-colors"
             title="Back to Dashboard"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
 
-          {/* Toggle Sidebar Button */}
+          {/* Desktop Toggle Sidebar Button */}
           <Button
             size="sm"
             variant="ghost"
             onClick={toggleSidebar}
-            className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="hidden lg:flex h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-[#00D69A] hover:bg-gray-100 dark:hover:bg-[#003D30]/40"
             title="Toggle File Sidebar (Mod-\)"
             aria-label="Toggle sidebar"
             data-testid="toggle-sidebar-button"
@@ -224,13 +375,16 @@ function WorkspaceContent() {
             )}
           </Button>
 
-          <span className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate max-w-[200px] sm:max-w-xs">
-            {project
-              ? `${project.name} / ${document?.path || 'main.tex'}`
-              : document?.path
-                ? `Project / ${document.path}`
-                : 'Project Editor'}
-          </span>
+          {/* Breadcrumb Info */}
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <span className="font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[120px] sm:max-w-xs">
+              {project?.name || 'Project'}
+            </span>
+            <ChevronRight className="h-3 w-3 text-gray-400 dark:text-[#00D69A]/40" />
+            <span className="text-gray-600 dark:text-[#00D69A] truncate max-w-[100px] sm:max-w-none font-medium">
+              {document?.path || 'main.tex'}
+            </span>
+          </div>
 
           <SaveStatusIndicator
             status={status}
@@ -241,13 +395,13 @@ function WorkspaceContent() {
           />
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Toggle PDF Preview Button */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          {/* Desktop Toggle PDF Preview Button */}
           <Button
             size="sm"
             variant="ghost"
             onClick={togglePdf}
-            className="h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="hidden lg:flex h-8 w-8 p-0 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-[#00D69A] hover:bg-gray-100 dark:hover:bg-[#003D30]/40"
             title="Toggle PDF Preview (Mod-Alt-P)"
             aria-label="Toggle preview"
             data-testid="toggle-pdf-button"
@@ -265,9 +419,9 @@ function WorkspaceContent() {
           <Button
             size="sm"
             variant="outline"
-            className="hidden sm:flex items-center gap-1 text-xs border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+            className="hidden md:flex items-center gap-1.5 text-xs border-gray-200 dark:border-[#00D69A]/20 bg-white dark:bg-[#0A1310] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#003D30]/40"
           >
-            <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" /> AI Assistant
+            <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-[#00D69A]" /> AI Assistant
           </Button>
 
           {/* Integrated Compile Toolbar */}
@@ -280,179 +434,105 @@ function WorkspaceContent() {
         </div>
       </header>
 
-      {/* Main Three-Panel Resizable Area */}
-      <ResizablePanelGroup
-        direction="horizontal"
-        autoSaveId="texly-workspace-layout"
-        className="flex-1 overflow-hidden"
-      >
-        {/* Left: File Tree Sidebar */}
-        <ResizablePanel
-          ref={sidebarRef}
-          id="sidebar"
-          order={1}
-          defaultSize={18}
-          minSize={12}
-          maxSize={30}
-          collapsible={true}
-          onCollapse={() => setIsSidebarCollapsed(true)}
-          onExpand={() => setIsSidebarCollapsed(false)}
-          className="bg-gray-50 dark:bg-gray-900/60 flex flex-col"
+      {/* Mobile & Tablet Tab Switcher (< 1024px) */}
+      <div className="lg:hidden flex items-center border-b border-gray-200 dark:border-[#00D69A]/15 bg-white dark:bg-[#0A1310] px-2 text-xs font-medium">
+        <button
+          onClick={() => setMobileTab('files')}
+          className={`flex items-center gap-1.5 px-3 py-2.5 border-b-2 transition-all cursor-pointer min-h-[44px] ${
+            mobileTab === 'files'
+              ? 'border-[#00D69A] text-[#00D69A] font-semibold bg-[#003D30]/20'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+          }`}
         >
-          <div className="p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between font-medium text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-            <span className="flex items-center gap-2">
-              <Files className="h-4 w-4" /> Project Files
-            </span>
-            <span className="text-[10px] text-gray-400 lowercase">draggable</span>
-          </div>
-          <div className="p-2 space-y-1 text-sm overflow-y-auto flex-1">
-            <div className="px-2 py-1.5 rounded bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 font-medium cursor-pointer text-xs flex items-center gap-2">
-              <FileText className="h-3.5 w-3.5" /> {document?.path || 'main.tex'}
-            </div>
-            <div className="px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer text-xs flex items-center gap-2">
-              <FileText className="h-3.5 w-3.5" /> references.bib
-            </div>
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        {/* Center: Editor Panel */}
-        <ResizablePanel
-          id="editor"
-          order={2}
-          defaultSize={47}
-          minSize={30}
-          className="bg-white dark:bg-gray-950 flex flex-col"
+          <Files className="h-4 w-4" /> Files
+        </button>
+        <button
+          onClick={() => setMobileTab('editor')}
+          className={`flex items-center gap-1.5 px-3 py-2.5 border-b-2 transition-all cursor-pointer min-h-[44px] ${
+            mobileTab === 'editor'
+              ? 'border-[#00D69A] text-[#00D69A] font-semibold bg-[#003D30]/20'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+          }`}
         >
-          <div className="h-8 border-b border-gray-200 dark:border-gray-800 px-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900">
-            <span>{document?.path || 'main.tex'}</span>
-            <span className="text-[11px] text-gray-400">
-              {document ? `Rev ${document.revision} • LaTeX • UTF-8` : 'LaTeX • UTF-8'}
-            </span>
-          </div>
-          <div className="flex-1 p-4 font-mono text-xs overflow-auto text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-950 relative">
-            {isLoading ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-950/70">
-                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-              </div>
-            ) : (
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="w-full h-full resize-none font-mono text-xs leading-relaxed outline-none border-none p-0 focus:ring-0 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400"
-                spellCheck={false}
-                placeholder="Enter LaTeX document content..."
-              />
-            )}
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        {/* Right: PDF Preview Panel */}
-        <ResizablePanel
-          ref={pdfRef}
-          id="pdf-preview"
-          order={3}
-          defaultSize={35}
-          minSize={20}
-          maxSize={60}
-          collapsible={true}
-          onCollapse={() => setIsPdfCollapsed(true)}
-          onExpand={() => setIsPdfCollapsed(false)}
-          className="bg-gray-100 dark:bg-gray-900 flex flex-col overflow-hidden"
+          <Code2 className="h-4 w-4" /> Editor
+        </button>
+        <button
+          onClick={() => setMobileTab('pdf')}
+          className={`flex items-center gap-1.5 px-3 py-2.5 border-b-2 transition-all cursor-pointer min-h-[44px] ${
+            mobileTab === 'pdf'
+              ? 'border-[#00D69A] text-[#00D69A] font-semibold bg-[#003D30]/20'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+          }`}
         >
-          {/* PDF Viewer Header */}
-          <div className="h-8 border-b border-gray-200 dark:border-gray-800 px-3 flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-900">
-            <span className="font-medium flex items-center gap-1.5">
-              <FileText className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" /> PDF Preview
-              {pageCount && (
-                <span className="text-[11px] font-normal text-gray-400">
-                  ({pageCount} page{pageCount > 1 ? 's' : ''})
-                </span>
-              )}
-            </span>
-            <div className="flex items-center gap-2">
-              {pdfUrl && (
-                <>
-                  <a
-                    href={pdfUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-                    title="Open PDF in new tab"
-                  >
-                    <ExternalLink className="h-3 w-3" /> Pop out
-                  </a>
-                  <a
-                    href={pdfUrl}
-                    download={`${project?.name || 'document'}.pdf`}
-                    className="text-[11px] text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center gap-1"
-                    title="Download PDF"
-                  >
-                    <Download className="h-3 w-3" />
-                  </a>
-                </>
-              )}
-            </div>
-          </div>
+          <FileText className="h-4 w-4" /> PDF Preview
+          {currentCompilation?.status === 'RUNNING' && (
+            <Loader2 className="h-3 w-3 animate-spin text-[#00D69A]" />
+          )}
+        </button>
+      </div>
 
-          {/* PDF Viewer Content Area */}
-          <div className="flex-1 relative flex flex-col items-center justify-center bg-gray-200 dark:bg-gray-900/60 overflow-hidden">
-            {isCompiling ? (
-              <div className="flex flex-col items-center justify-center p-6 text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400 mb-2" />
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                  Compiling document...
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Executing LaTeX engine inside container sandbox
-                </p>
-              </div>
-            ) : isLoadingPdf ? (
-              <div className="flex flex-col items-center justify-center p-6 text-center">
-                <Loader2 className="h-6 w-6 animate-spin text-gray-400 mb-2" />
-                <p className="text-xs text-gray-500">Loading PDF preview...</p>
-              </div>
-            ) : pdfUrl ? (
-              <iframe
-                src={pdfUrl}
-                className="w-full h-full border-0 bg-white"
-                title="Compiled PDF Preview"
-              />
-            ) : currentCompilation?.status === 'FAILED' ? (
-              <div className="p-6">
-                <div className="border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 rounded-lg p-6 max-w-sm text-center">
-                  <AlertCircle className="h-7 w-7 text-rose-600 dark:text-rose-400 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-rose-800 dark:text-rose-200 mb-1">
-                    Compilation Failed
-                  </p>
-                  <p className="text-xs text-rose-600 dark:text-rose-400">
-                    {currentCompilation.errorCount > 0
-                      ? `${currentCompilation.errorCount} error(s) found during compilation. Check the error log.`
-                      : 'LaTeX process exited with errors. Check log.'}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8 max-w-sm text-center bg-white/60 dark:bg-gray-800/60 m-4">
-                <FileText className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  No PDF preview yet
-                </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  Trigger a compilation using{' '}
-                  <kbd className="font-mono bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-1 py-0.5 rounded">
-                    Mod-Enter
-                  </kbd>{' '}
-                  or the Compile button above.
-                </p>
-              </div>
-            )}
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+      {/* Mobile Tab Views (< 1024px) */}
+      <div className="flex-1 lg:hidden overflow-hidden">
+        {mobileTab === 'files' && renderSidebarContent()}
+        {mobileTab === 'editor' && renderEditorContent()}
+        {mobileTab === 'pdf' && renderPdfContent()}
+      </div>
+
+      {/* Desktop Three-Panel Resizable Layout (>= 1024px) */}
+      <div className="hidden lg:flex flex-1 overflow-hidden">
+        <ResizablePanelGroup
+          direction="horizontal"
+          autoSaveId="texly-workspace-layout"
+          className="flex-1 overflow-hidden"
+        >
+          {/* Left: File Tree Sidebar */}
+          <ResizablePanel
+            ref={sidebarRef}
+            id="sidebar"
+            order={1}
+            defaultSize={18}
+            minSize={12}
+            maxSize={30}
+            collapsible={true}
+            onCollapse={() => setIsSidebarCollapsed(true)}
+            onExpand={() => setIsSidebarCollapsed(false)}
+            className="flex flex-col"
+          >
+            {renderSidebarContent()}
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          {/* Center: Editor Panel */}
+          <ResizablePanel
+            id="editor"
+            order={2}
+            defaultSize={47}
+            minSize={30}
+            className="flex flex-col"
+          >
+            {renderEditorContent()}
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          {/* Right: PDF Preview Panel */}
+          <ResizablePanel
+            ref={pdfRef}
+            id="pdf-preview"
+            order={3}
+            defaultSize={35}
+            minSize={20}
+            maxSize={60}
+            collapsible={true}
+            onCollapse={() => setIsPdfCollapsed(true)}
+            onExpand={() => setIsPdfCollapsed(false)}
+            className="flex flex-col overflow-hidden"
+          >
+            {renderPdfContent()}
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
     </div>
   );
 }

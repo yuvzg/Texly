@@ -80,15 +80,15 @@ function RegisterContent() {
 
   return (
     <GuestOnlyRoute>
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">Create an account</h2>
-          <p className="text-sm text-gray-500">Sign up to start drafting LaTeX documents</p>
+      <div className="space-y-5">
+        <div className="space-y-1 text-center sm:text-left">
+          <h2 className="text-2xl font-bold tracking-tight text-white">Create an account</h2>
+          <p className="text-sm text-[#94A3B8]">Sign up to start drafting LaTeX documents with AI</p>
         </div>
 
         {apiError && <AuthAlert variant="error" message={apiError} />}
 
-        <form className="space-y-3" onSubmit={handleSubmit} noValidate>
+        <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           <FormField id="name" label="Full Name" error={errors.name}>
             <input
               id="name"
@@ -98,11 +98,11 @@ function RegisterContent() {
               value={name}
               disabled={isSubmitting}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 text-sm border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+              className="w-full px-3 py-2 text-sm border rounded-lg bg-[#050807] border-[#00D69A]/20 text-[#ECFDF5] placeholder:text-[#94A3B8]/40 focus:outline-none focus:border-[#00D69A] focus:ring-1 focus:ring-[#00D69A] focus:shadow-[0_0_12px_rgba(0,214,154,0.15)] disabled:opacity-60 transition-all"
             />
           </FormField>
 
-          <FormField id="email" label="Email" error={errors.email}>
+          <FormField id="email" label="Email Address" error={errors.email}>
             <input
               id="email"
               type="email"
@@ -111,7 +111,7 @@ function RegisterContent() {
               value={email}
               disabled={isSubmitting}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 text-sm border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+              className="w-full px-3 py-2 text-sm border rounded-lg bg-[#050807] border-[#00D69A]/20 text-[#ECFDF5] placeholder:text-[#94A3B8]/40 focus:outline-none focus:border-[#00D69A] focus:ring-1 focus:ring-[#00D69A] focus:shadow-[0_0_12px_rgba(0,214,154,0.15)] disabled:opacity-60 transition-all"
             />
           </FormField>
 
@@ -137,14 +137,14 @@ function RegisterContent() {
             type="submit"
             disabled={isSubmitting}
           >
-            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin text-[#050807]" />}
             {isSubmitting ? 'Creating Account...' : 'Create Account'}
           </Button>
         </form>
 
-        <p className="text-center text-xs text-gray-500">
+        <p className="text-center text-xs text-[#94A3B8] pt-2 border-t border-[#00D69A]/10">
           Already have an account?{' '}
-          <Link href="/login" className="text-blue-600 font-medium hover:underline">
+          <Link href="/login" className="text-[#00D69A] font-semibold hover:underline">
             Sign in
           </Link>
         </p>

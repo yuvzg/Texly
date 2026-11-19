@@ -7,7 +7,7 @@ import { AuthAlert, FormField } from '@/components/auth/auth-ui';
 import { GuestOnlyRoute } from '@/components/auth/route-guards';
 import { ForgotPasswordRequestSchema, ErrorCodeEnum } from '@texly/shared';
 import { apiClient, ApiClientError } from '@/lib/api-client';
-import { Loader2, ArrowLeft, Mail } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -48,10 +48,10 @@ export default function ForgotPasswordPage() {
 
   return (
     <GuestOnlyRoute>
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">Reset your password</h2>
-          <p className="text-sm text-gray-500">
+      <div className="space-y-5">
+        <div className="space-y-1 text-center sm:text-left">
+          <h2 className="text-2xl font-bold tracking-tight text-white">Reset your password</h2>
+          <p className="text-sm text-[#94A3B8]">
             Enter your email address and we will send you a password reset link
           </p>
         </div>
@@ -68,7 +68,8 @@ export default function ForgotPasswordPage() {
             <div className="pt-2">
               <Link href="/login" className="block w-full">
                 <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                  <ArrowLeft className="h-4 w-4" /> Back to Sign In
+                  <ArrowLeft className="h-4 w-4" />
+                  Return to sign in
                 </Button>
               </Link>
             </div>
@@ -76,36 +77,36 @@ export default function ForgotPasswordPage() {
         ) : (
           <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             <FormField id="email" label="Email Address" error={fieldError ?? undefined}>
-              <div className="relative">
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  disabled={isSubmitting}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
-                />
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              </div>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="name@example.com"
+                value={email}
+                disabled={isSubmitting}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 text-sm border rounded-lg bg-[#050807] border-[#00D69A]/20 text-[#ECFDF5] placeholder:text-[#94A3B8]/40 focus:outline-none focus:border-[#00D69A] focus:ring-1 focus:ring-[#00D69A] focus:shadow-[0_0_12px_rgba(0,214,154,0.15)] disabled:opacity-60 transition-all"
+              />
             </FormField>
 
             <Button
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full mt-4 flex items-center justify-center gap-2"
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin text-[#050807]" />}
               {isSubmitting ? 'Sending Link...' : 'Send Reset Link'}
             </Button>
 
-            <p className="text-center text-xs text-gray-500 pt-1">
-              Remember your password?{' '}
-              <Link href="/login" className="text-blue-600 font-medium hover:underline">
+            <div className="text-center pt-2 border-t border-[#00D69A]/10">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-1.5 text-xs text-[#00D69A] hover:underline"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
                 Back to sign in
               </Link>
-            </p>
+            </div>
           </form>
         )}
       </div>
