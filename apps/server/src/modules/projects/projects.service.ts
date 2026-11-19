@@ -42,5 +42,9 @@ export class ProjectsService {
     }
     return project;
   }
+
+  public async deleteProject(projectId: string, userId: string): Promise<void> {
+    await this.projectsRepository.deleteProject(projectId, userId);
+  }
 }
 

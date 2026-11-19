@@ -210,6 +210,26 @@ export class ProjectsRepository {
     return this.mapToDTO(memberProject.project, memberProject.role);
   }
 
+  public async deleteProject(projectId: string, userId: string): Promise<void> {
+    const memberProject = await this.prisma.projectMember.findFirst({
+      where: {
+        projectId,
+        userId,
+      },
+    });
+
+    if (!memberProject || memberProject.role !== 'OWNER') {
+      throw new AppError(ErrorCodeEnum.FORBIDDEN, 403, 'Only project owners can delete this project.');
+    }
+
+    await this.prisma.project.update({
+      where: { id: projectId },
+      data: {
+        trashedAt: new Date(),
+      },
+    });
+  }
+
   private mapToDTO(project: Project, role?: ProjectRole): ProjectDTO {
     return {
       id: project.id,

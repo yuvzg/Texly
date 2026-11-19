@@ -47,3 +47,4 @@ export function TexlyLogo({
     </div>
   );
 }
+

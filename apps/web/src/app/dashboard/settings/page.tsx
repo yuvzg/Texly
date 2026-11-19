@@ -168,8 +168,9 @@ export default function UserSettingsPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs px-2.5 py-1 rounded-full bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30 font-semibold capitalize">
-              Plan: {plan}
+            <span className="text-xs px-2.5 py-1 rounded-full bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30 font-semibold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00D69A] animate-pulse" />
+              Active
             </span>
           </div>
         </header>

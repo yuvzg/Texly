@@ -106,4 +106,67 @@ export class WorkspacesRepository {
       };
     });
   }
+
+  async createWorkspace(
+    userId: string,
+    input: { name: string; slug?: string },
+  ): Promise<WorkspaceWithRoleDTO> {
+    const rawSlug =
+      input.slug ||
+      input.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+    let slug = rawSlug || 'workspace';
+
+    // Ensure unique slug
+    let attempt = 0;
+    while (true) {
+      const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
+      const existing = await this.prisma.workspace.findUnique({ where: { slug: candidate } });
+      if (!existing) {
+        slug = candidate;
+        break;
+      }
+      attempt++;
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const workspace = await tx.workspace.create({
+        data: {
+          name: input.name.trim(),
+          slug,
+          isPersonal: false,
+        },
+      });
+
+      await tx.workspaceMember.create({
+        data: {
+          workspaceId: workspace.id,
+          userId,
+          role: 'OWNER',
+        },
+      });
+
+      await tx.subscription.create({
+        data: {
+          workspaceId: workspace.id,
+          plan: 'FREE',
+          status: 'ACTIVE',
+        },
+      });
+
+      return {
+        id: workspace.id,
+        name: workspace.name,
+        slug: workspace.slug,
+        role: 'OWNER',
+        isPersonal: false,
+        usage: {
+          storageBytes: 0,
+          quota: 50 * 1024 * 1024,
+        },
+      };
+    });
+  }
 }

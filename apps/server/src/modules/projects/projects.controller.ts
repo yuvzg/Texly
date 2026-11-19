@@ -97,5 +97,31 @@ export class ProjectsController {
       next(err);
     }
   };
+
+  public deleteProject = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new AppError(ErrorCodeEnum.UNAUTHENTICATED, 401, 'Authentication required');
+      }
+
+      const rawProjectId = req.params['projectId'];
+      const projectId = Array.isArray(rawProjectId) ? rawProjectId[0] : rawProjectId;
+
+      if (!projectId) {
+        throw new AppError(ErrorCodeEnum.BAD_REQUEST, 400, 'Missing projectId');
+      }
+
+      await this.projectsService.deleteProject(projectId, userId);
+
+      res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 

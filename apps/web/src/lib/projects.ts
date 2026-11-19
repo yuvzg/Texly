@@ -35,3 +35,10 @@ export async function createProject(data: CreateProjectRequest): Promise<Project
   return apiClient.post<ProjectDTO>('/projects', data);
 }
 
+/**
+ * Deletes (moves to trash) a project.
+ */
+export async function deleteProject(projectId: string): Promise<void> {
+  return apiClient.delete<void>(`/projects/${projectId}`);
+}
+

@@ -30,5 +30,30 @@ export class WorkspacesController {
       next(err);
     }
   };
+
+  public createWorkspace = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new AppError(ErrorCodeEnum.UNAUTHENTICATED, 401, 'Authentication required');
+      }
+
+      const workspace = await this.workspacesRepository.createWorkspace(userId, req.body);
+
+      res.status(201).json({
+        data: workspace,
+        meta: {
+          requestId: req.id,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 

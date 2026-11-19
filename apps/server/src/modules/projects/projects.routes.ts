@@ -37,6 +37,9 @@ export function createProjectsRouter(options: ProjectsRouterOptions): Router {
   // GET /projects/:projectId - get project details
   router.get('/:projectId', options.controller.getProject);
 
+  // DELETE /projects/:projectId - delete project (move to trash)
+  router.delete('/:projectId', options.controller.deleteProject);
+
   return router;
 }
 

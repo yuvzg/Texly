@@ -75,7 +75,7 @@ describe('UserSettingsPage Component', () => {
     expect(screen.getByDisplayValue('Ada Lovelace')).toBeInTheDocument();
     expect(screen.getByDisplayValue('ada@texly.app')).toBeDisabled();
     expect(screen.getByText(/verified/i)).toBeInTheDocument();
-    expect(screen.getByText(/plan: free/i)).toBeInTheDocument();
+    expect(screen.getByText('Active', { exact: true })).toBeInTheDocument();
 
     expect(
       screen.getByRole('heading', { name: /editor & interface preferences/i }),

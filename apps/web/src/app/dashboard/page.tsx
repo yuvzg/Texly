@@ -22,28 +22,41 @@ import {
   Briefcase,
   Sliders,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProtectedRoute } from '@/components/auth/route-guards';
 import { useAuth } from '@/providers/auth-provider';
 import { fetchProjects } from '@/lib/projects';
 import { NewProjectModal } from '@/components/dashboard/new-project-modal';
+import { NewWorkspaceModal } from '@/components/dashboard/new-workspace-modal';
+import { DeleteProjectModal } from '@/components/dashboard/delete-project-modal';
 import { TexlyLogo } from '@/components/common/texly-logo';
-import type { ProjectDTO } from '@texly/shared';
+import type { ProjectDTO, WorkspaceWithRoleDTO, AuthWorkspaceSummaryDTO } from '@texly/shared';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, workspaces, plan, logout } = useAuth();
+  const { user, workspaces, logout } = useAuth();
+  const [localWorkspaces, setLocalWorkspaces] = useState<Array<AuthWorkspaceSummaryDTO | WorkspaceWithRoleDTO>>([]);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
+  const [isNewWorkspaceOpen, setIsNewWorkspaceOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<ProjectDTO | null>(null);
   const [projects, setProjects] = useState<ProjectDTO[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
-  const personalWorkspace = workspaces.find((w) => w.isPersonal);
-  const defaultWorkspaceId = personalWorkspace?.id || workspaces[0]?.id;
+  useEffect(() => {
+    if (workspaces && workspaces.length > 0) {
+      setLocalWorkspaces(workspaces);
+    }
+  }, [workspaces]);
+
+  const activeWorkspacesList = localWorkspaces.length > 0 ? localWorkspaces : workspaces;
+  const personalWorkspace = activeWorkspacesList.find((w) => w.isPersonal);
+  const defaultWorkspaceId = personalWorkspace?.id || activeWorkspacesList[0]?.id;
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | undefined>(
     defaultWorkspaceId,
   );
@@ -88,6 +101,15 @@ export default function DashboardPage() {
     router.push(`/workspace?projectId=${newProject.id}`);
   };
 
+  const handleWorkspaceCreated = (newWorkspace: WorkspaceWithRoleDTO) => {
+    setLocalWorkspaces((prev) => [...prev, newWorkspace]);
+    setSelectedWorkspaceId(newWorkspace.id);
+  };
+
+  const handleProjectDeleted = (deletedId: string) => {
+    setProjects((prev) => prev.filter((p) => p.id !== deletedId));
+  };
+
   const formatEngine = (engine: string) => {
     switch (engine) {
       case 'XELATEX':
@@ -102,9 +124,9 @@ export default function DashboardPage() {
 
   const activeWorkspaceName = useMemo(() => {
     if (!selectedWorkspaceId) return 'All Workspaces';
-    const ws = workspaces.find((w) => w.id === selectedWorkspaceId);
+    const ws = activeWorkspacesList.find((w) => w.id === selectedWorkspaceId);
     return ws ? ws.name : 'Workspace';
-  }, [workspaces, selectedWorkspaceId]);
+  }, [activeWorkspacesList, selectedWorkspaceId]);
 
   const filteredProjects = useMemo(() => {
     if (!searchQuery.trim()) return projects;
@@ -168,10 +190,10 @@ export default function DashboardPage() {
 
           {/* Workspaces Section */}
           <div className="px-4 py-3 flex-1 overflow-y-auto">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#94A3B8]/70 px-2 mb-2">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#94A3B8]/70 px-2 mb-2 font-heading">
               <span>Workspaces</span>
-              <span className="text-[10px] bg-[#003D30] text-[#00D69A] px-1.5 py-0.5 rounded-full">
-                {workspaces.length}
+              <span className="text-[10px] bg-[#003D30] text-[#00D69A] px-1.5 py-0.5 rounded-full font-mono">
+                {activeWorkspacesList.length}
               </span>
             </div>
 
@@ -193,7 +215,7 @@ export default function DashboardPage() {
                 <span className="truncate">All Workspaces</span>
               </button>
 
-              {workspaces.map((w) => {
+              {activeWorkspacesList.map((w) => {
                 const isSelected = selectedWorkspaceId === w.id;
                 const initial = w.name.charAt(0).toUpperCase();
                 return (
@@ -218,6 +240,17 @@ export default function DashboardPage() {
                   </button>
                 );
               })}
+
+              <button
+                onClick={() => {
+                  setIsNewWorkspaceOpen(true);
+                  setIsMobileDrawerOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium text-[#94A3B8] hover:text-[#00D69A] hover:bg-[#003D30]/30 transition-all text-left cursor-pointer border border-dashed border-[#00D69A]/20 mt-1.5"
+              >
+                <Plus className="h-3.5 w-3.5 text-[#00D69A]" />
+                <span>Add Workspace</span>
+              </button>
             </div>
           </div>
 
@@ -231,9 +264,6 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-semibold text-white truncate">{user.name}</span>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30">
-                      {plan}
-                    </span>
                   </div>
                   <span className="text-[11px] text-[#94A3B8] truncate block">{user.email}</span>
                 </div>
@@ -390,11 +420,26 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        {p.role && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30 font-medium">
-                            {p.role}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {p.role && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30 font-medium font-mono">
+                              {p.role}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setProjectToDelete(p);
+                            }}
+                            className="p-1 rounded-md text-[#94A3B8]/60 hover:text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            title="Delete project"
+                            aria-label={`Delete ${p.name}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       {p.description ? (
@@ -427,8 +472,23 @@ export default function DashboardPage() {
           isOpen={isNewProjectOpen}
           onClose={() => setIsNewProjectOpen(false)}
           onSuccess={handleProjectCreated}
-          workspaces={workspaces}
+          workspaces={activeWorkspacesList}
           defaultWorkspaceId={selectedWorkspaceId}
+        />
+
+        {/* New Workspace Modal */}
+        <NewWorkspaceModal
+          isOpen={isNewWorkspaceOpen}
+          onClose={() => setIsNewWorkspaceOpen(false)}
+          onWorkspaceCreated={handleWorkspaceCreated}
+        />
+
+        {/* Delete Project Modal */}
+        <DeleteProjectModal
+          project={projectToDelete}
+          isOpen={projectToDelete !== null}
+          onClose={() => setProjectToDelete(null)}
+          onDeleted={handleProjectDeleted}
         />
       </div>
     </ProtectedRoute>

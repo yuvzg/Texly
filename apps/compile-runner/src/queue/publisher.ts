@@ -52,7 +52,7 @@ export class ResultPublisher {
           timestamp: new Date().toISOString(),
         },
         {
-          jobId: `${compilationId}:started`,
+          jobId: `${compilationId}__started`,
           removeOnComplete: true,
         },
       );
@@ -97,7 +97,7 @@ export class ResultPublisher {
     const validated = CompileResultV1Schema.parse(rawResult);
 
     await this.resultsQueue.add('finished', validated, {
-      jobId: `${params.compilationId}:finished`,
+      jobId: `${params.compilationId}__finished`,
       removeOnComplete: { age: 86400 },
     });
 

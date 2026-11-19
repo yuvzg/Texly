@@ -12,5 +12,7 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
     exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/e2e/**'],
+    fileParallelism: false,
+    testTimeout: 15000,
   },
 });
