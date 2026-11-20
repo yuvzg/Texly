@@ -66,10 +66,10 @@ function LoginContent() {
     <GuestOnlyRoute>
       <div className="space-y-5">
         <div className="space-y-1 text-center sm:text-left">
-          <h2 className="text-2xl font-bold tracking-tight text-white">
-            Sign in to your account
-          </h2>
-          <p className="text-sm text-[#94A3B8]">Enter your credentials to access your LaTeX workspaces</p>
+          <h2 className="text-2xl font-bold tracking-tight text-white">Sign in to your account</h2>
+          <p className="text-sm text-[#94A3B8]">
+            Enter your credentials to access your LaTeX workspaces
+          </p>
         </div>
 
         {apiError && <AuthAlert variant="error" message={apiError} />}

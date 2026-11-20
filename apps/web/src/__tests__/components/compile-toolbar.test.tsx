@@ -5,6 +5,24 @@ import { CompileToolbar } from '@/components/editor/compile-toolbar';
 import { apiClient, ApiClientError } from '@/lib/api-client';
 import { ErrorCodeEnum, type CompilationDTO, type CompilationLogDTO } from '@texly/shared';
 
+vi.mock('@/lib/socket-client', () => ({
+  socketClient: {
+    getStatus: vi.fn().mockReturnValue('disconnected'),
+    subscribeStatus: vi.fn().mockImplementation((cb: (s: string) => void) => {
+      cb('disconnected');
+      return () => {};
+    }),
+    joinProject: vi.fn(),
+    leaveProject: vi.fn(),
+    onCompilationQueued: vi.fn().mockReturnValue(() => {}),
+    onCompilationStarted: vi.fn().mockReturnValue(() => {}),
+    onCompilationFinished: vi.fn().mockReturnValue(() => {}),
+    on: vi.fn().mockReturnValue(() => {}),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  },
+}));
+
 const mockProjectId = '018f6c4a-8e2b-7c1e-9a1d-4f8b2c5e7a90';
 
 const mockQueuedCompilation: CompilationDTO = {

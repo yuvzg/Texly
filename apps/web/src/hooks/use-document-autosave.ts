@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { DocumentDTO } from '@texly/shared';
-import { fetchMainDocument, saveDocumentContent, computeSha256 } from '@/lib/documents';
+import { fetchMainDocument, fetchDocument, saveDocumentContent, computeSha256 } from '@/lib/documents';
 import { ApiClientError } from '@/lib/api-client';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'unsaved' | 'conflict' | 'error';
 
 export interface UseDocumentAutosaveOptions {
   projectId: string;
-  documentId?: string;
-  debounceMs?: number;
-  onSaveSuccess?: (revision: number) => void;
-  onSaveConflict?: (serverRevision?: number) => void;
-  onSaveError?: (error: Error) => void;
+  documentId?: string | undefined;
+  debounceMs?: number | undefined;
+  onSaveSuccess?: ((revision: number) => void) | undefined;
+  onSaveConflict?: ((serverRevision?: number) => void) | undefined;
+  onSaveError?: ((error: Error) => void) | undefined;
 }
 
 export function useDocumentAutosave({
@@ -40,32 +40,37 @@ export function useDocumentAutosave({
   const isMountedRef = useRef<boolean>(true);
 
   // Keep contentRef in sync
-  const setContent = useCallback((newContent: string) => {
-    contentRef.current = newContent;
-    setContentState(newContent);
+  const setContent = useCallback(
+    (newContent: string) => {
+      contentRef.current = newContent;
+      setContentState(newContent);
 
-    if (newContent !== lastSavedContentRef.current) {
-      setStatus('unsaved');
-      setErrorMessage(null);
+      if (newContent !== lastSavedContentRef.current) {
+        setStatus('unsaved');
+        setErrorMessage(null);
 
-      // Debounce autosave
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
+        // Debounce autosave
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = setTimeout(() => {
+          void executeSave();
+        }, debounceMs);
       }
-      debounceTimerRef.current = setTimeout(() => {
-        void executeSave();
-      }, debounceMs);
-    }
-  }, [debounceMs]);
+    },
+    [debounceMs],
+  );
 
-  // Load document on mount or when projectId changes
+  // Load document on mount or when projectId/explicitDocumentId changes
   const loadDocument = useCallback(async () => {
     if (!projectId) return;
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
-      const doc = await fetchMainDocument(projectId);
+      const doc = explicitDocumentId
+        ? await fetchDocument(projectId, explicitDocumentId)
+        : await fetchMainDocument(projectId);
       if (!isMountedRef.current) return;
 
       setDocument(doc);
@@ -86,7 +91,7 @@ export function useDocumentAutosave({
         setIsLoading(false);
       }
     }
-  }, [projectId]);
+  }, [projectId, explicitDocumentId]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -216,4 +221,3 @@ export function useDocumentAutosave({
     reloadDocument: loadDocument,
   };
 }
-

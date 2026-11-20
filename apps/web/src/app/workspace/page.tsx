@@ -13,9 +13,6 @@ import {
   PanelLeftClose,
   PanelRight,
   PanelRightClose,
-  ExternalLink,
-  AlertCircle,
-  Download,
   Code2,
   ChevronRight,
 } from 'lucide-react';
@@ -24,17 +21,30 @@ import { Button } from '@/components/ui/button';
 import { ProtectedRoute } from '@/components/auth/route-guards';
 import { CompileToolbar } from '@/components/editor/compile-toolbar';
 import { SaveStatusIndicator } from '@/components/editor/save-status-indicator';
-import { TexlyLogo } from '@/components/common/texly-logo';
+import { PdfViewer } from '@/components/pdf/pdf-viewer';
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from '@/components/ui/resizable';
+  CodeMirrorEditor,
+  type CodeMirrorEditorHandle,
+} from '@/components/editor/codemirror-editor';
+import { ToolsPanel, type ToolsPanelTab } from '@/components/editor/tools-panel';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ThemeToggle } from '@/providers/theme-provider';
 import { useDocumentAutosave } from '@/hooks/use-document-autosave';
-import { fetchProject } from '@/lib/projects';
+import { useAutoCompile } from '@/hooks/use-auto-compile';
+import { FileExplorer } from '@/components/editor/file-explorer/file-explorer';
+import { DocumentTabs } from '@/components/editor/document-tabs';
+import { useEditorStore } from '@/stores/editor.store';
+import { useProjectFiles, useSetMainFile } from '@/hooks/use-files';
+import { fetchProject, updateProject } from '@/lib/projects';
 import { fetchCompilationPdf } from '@/lib/compilations';
-import type { ProjectDTO, CompilationDTO } from '@texly/shared';
+import type {
+  ProjectDTO,
+  CompilationDTO,
+  CompilationDiagnostic,
+  CompilationLogDTO,
+  Engine,
+  BibTool,
+} from '@texly/shared';
 
 const DEFAULT_DEMO_PROJECT_ID = '01931a00-0000-7000-8000-000000000003';
 
@@ -46,10 +56,12 @@ function WorkspaceContent() {
   // Resizable panel handles
   const sidebarRef = useRef<ImperativePanelHandle>(null);
   const pdfRef = useRef<ImperativePanelHandle>(null);
+  const editorHandleRef = useRef<CodeMirrorEditorHandle>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isPdfCollapsed, setIsPdfCollapsed] = useState(false);
 
   // Compilation & PDF Preview state
+  const compileRef = useRef<(() => Promise<void>) | null>(null);
   const [currentCompilation, setCurrentCompilation] = useState<CompilationDTO | null>(null);
   const [lastSuccessCompilation, setLastSuccessCompilation] = useState<CompilationDTO | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
@@ -57,6 +69,52 @@ function WorkspaceContent() {
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
+  // Diagnostics and Tools Panel state
+  const [diagnostics, setDiagnostics] = useState<CompilationDiagnostic[]>([]);
+  const [selectedLog, setSelectedLog] = useState<CompilationLogDTO | null>(null);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [toolsActiveTab, setToolsActiveTab] = useState<ToolsPanelTab>('problems');
+
+  // Mobile layout tab
+  const [mobileTab, setMobileTab] = useState<'files' | 'editor' | 'pdf'>('editor');
+
+  // Document Tabs & Editor State
+  const tabs = useEditorStore((state) => state.tabs);
+  const activeFileId = useEditorStore((state) => state.activeFileId);
+  const openTab = useEditorStore((state) => state.openTab);
+  const setTabDirty = useEditorStore((state) => state.setTabDirty);
+  const saveViewState = useEditorStore((state) => state.saveViewState);
+  const cachedStates = useEditorStore((state) => state.cachedStates);
+
+  const { data: filesData } = useProjectFiles(projectId);
+  const setMainFileMutation = useSetMainFile(projectId);
+
+  const activeTab = tabs.find((t) => t.fileId === activeFileId);
+  const activeDocumentId = activeTab?.documentId;
+
+  // Auto-open main document or first file if tabs are empty
+  useEffect(() => {
+    if (!filesData?.files || filesData.files.length === 0) return;
+    if (tabs.length === 0) {
+      const mainFile = filesData.mainFileId
+        ? filesData.files.find((f) => f.id === filesData.mainFileId)
+        : null;
+      const target =
+        mainFile ||
+        filesData.files.find((f) => f.nodeType === 'FILE' && f.kind === 'TEXT') ||
+        filesData.files[0];
+      if (target) {
+        openTab({
+          fileId: target.id,
+          documentId: target.documentId,
+          path: target.path,
+          name: target.name,
+        });
+      }
+    }
+  }, [filesData, tabs.length, openTab]);
+
+  // Fetch project settings on mount
   useEffect(() => {
     let isMounted = true;
     if (projectId) {
@@ -71,6 +129,7 @@ function WorkspaceContent() {
     };
   }, [projectId]);
 
+  // Document autosave
   const {
     document,
     content,
@@ -83,18 +142,57 @@ function WorkspaceContent() {
     reloadDocument,
   } = useDocumentAutosave({
     projectId,
+    documentId: activeDocumentId,
     debounceMs: 1000,
   });
 
+  // Synchronize dirty tab status with autosave state
+  useEffect(() => {
+    if (activeFileId) {
+      if (status === 'unsaved') {
+        setTabDirty(activeFileId, true, content);
+      } else if (status === 'saved') {
+        setTabDirty(activeFileId, false);
+      }
+    }
+  }, [activeFileId, status, content, setTabDirty]);
+
+  const handleSetMainFile = async (fileId: string) => {
+    await setMainFileMutation.mutateAsync(fileId);
+  };
+
+  // Auto-compile integration (2.5s debounce after successful save)
+  useAutoCompile({
+    enabled: project?.autoCompile ?? false,
+    saveStatus: status,
+    lastSavedAt,
+    isCompiling,
+    compile: async () => {
+      if (compileRef.current) {
+        await compileRef.current();
+      }
+    },
+    debounceMs: 2500,
+  });
+
   const handleCompilationChange = useCallback(
-    (
-      current: CompilationDTO | null,
-      lastSuccess: CompilationDTO | null,
-      compiling: boolean,
-    ) => {
+    (current: CompilationDTO | null, lastSuccess: CompilationDTO | null, compiling: boolean) => {
       setCurrentCompilation(current);
       setLastSuccessCompilation(lastSuccess);
       setIsCompiling(compiling);
+    },
+    [],
+  );
+
+  const handleDiagnosticsChange = useCallback(
+    (diags: CompilationDiagnostic[], log: CompilationLogDTO | null) => {
+      setDiagnostics(diags);
+      setSelectedLog(log);
+      // Auto open problems tab if errors exist
+      if (diags.some((d) => d.level === 'error')) {
+        setIsToolsOpen(true);
+        setToolsActiveTab('problems');
+      }
     },
     [],
   );
@@ -103,8 +201,7 @@ function WorkspaceContent() {
   const targetCompilationId =
     (currentCompilation?.status === 'SUCCEEDED' && currentCompilation.hasPdf
       ? currentCompilation.id
-      : null) ??
-    (lastSuccessCompilation?.hasPdf ? lastSuccessCompilation.id : null);
+      : null) ?? (lastSuccessCompilation?.hasPdf ? lastSuccessCompilation.id : null);
 
   useEffect(() => {
     let isMounted = true;
@@ -166,12 +263,9 @@ function WorkspaceContent() {
         }
       }
     }
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const [mobileTab, setMobileTab] = useState<'files' | 'editor' | 'pdf'>('editor');
 
   const toggleSidebar = () => {
     const panel = sidebarRef.current;
@@ -199,149 +293,116 @@ function WorkspaceContent() {
     }
   };
 
+  // Update Project Settings handler
+  const handleUpdateSettings = async (settings: {
+    engine?: Engine;
+    bibTool?: BibTool;
+    autoCompile?: boolean;
+  }) => {
+    if (!projectId) return;
+    try {
+      const updated = await updateProject(projectId, settings);
+      setProject(updated);
+    } catch {
+      // Background failure
+    }
+  };
+
+  // Jump to problem line in editor
+  const handleNavigateToProblem = (line: number) => {
+    if (editorHandleRef.current) {
+      editorHandleRef.current.goToLine(line);
+    }
+  };
+
   // Reusable File Sidebar Component
   const renderSidebarContent = () => (
-    <div className="flex flex-col h-full bg-white dark:bg-[#0A1310] border-r border-gray-200 dark:border-[#00D69A]/15">
-      <div className="p-3 border-b border-gray-200 dark:border-[#00D69A]/15 flex items-center justify-between font-medium text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-[#050807]/50">
-        <span className="flex items-center gap-2 font-semibold">
-          <Files className="h-4 w-4 text-[#00D69A]" /> Project Files
-        </span>
-        <span className="text-[10px] text-gray-400 dark:text-[#00D69A]/50 lowercase">latex</span>
-      </div>
-      <div className="p-2 space-y-1 text-sm overflow-y-auto flex-1">
-        <div className="px-3 py-2 rounded-lg bg-[#003D30] text-[#00D69A] border border-[#00D69A]/30 font-medium cursor-pointer text-xs flex items-center gap-2.5 shadow-[0_0_10px_rgba(0,214,154,0.08)]">
-          <FileText className="h-4 w-4 text-[#00D69A] shrink-0" />
-          <span className="truncate">{document?.path || 'main.tex'}</span>
-        </div>
-        <div className="px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#0C1814] text-gray-700 dark:text-gray-300 cursor-pointer text-xs flex items-center gap-2.5 transition-colors">
-          <FileText className="h-4 w-4 text-gray-400 dark:text-gray-500 shrink-0" />
-          <span className="truncate">references.bib</span>
-        </div>
-      </div>
-    </div>
+    <FileExplorer projectId={projectId} className="h-full" />
   );
 
-  // Reusable Editor Content Component
+  // Reusable Editor Content Component (with CodeMirror 6 and Tools Panel)
   const renderEditorContent = () => (
-    <div className="flex flex-col h-full bg-white dark:bg-[#050807]">
-      <div className="h-9 border-b border-gray-200 dark:border-[#00D69A]/15 px-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-[#0A1310]">
+    <div className="flex flex-col h-full bg-[#050807] overflow-hidden">
+      {/* Document Tabs */}
+      <DocumentTabs
+        mainFileId={project?.mainFileId ?? filesData?.mainFileId}
+        onSetMainFile={handleSetMainFile}
+      />
+
+      {/* Editor Subheader */}
+      <div className="h-9 border-b border-[#003D30]/30 px-4 flex items-center justify-between text-xs text-zinc-400 bg-[#0A120E] shrink-0">
         <div className="flex items-center gap-2">
           <Code2 className="h-3.5 w-3.5 text-[#00D69A]" />
-          <span className="font-medium text-gray-800 dark:text-gray-200">
-            {document?.path || 'main.tex'}
+          <span className="font-medium text-zinc-200">
+            {activeTab?.path || document?.path || 'main.tex'}
           </span>
         </div>
-        <span className="text-[11px] text-gray-400 dark:text-gray-500">
-          {document ? `Rev ${document.revision} • LaTeX • UTF-8` : 'LaTeX • UTF-8'}
-        </span>
+        <div className="flex items-center gap-3">
+          <SaveStatusIndicator
+            status={status}
+            errorMessage={errorMessage}
+            lastSavedAt={lastSavedAt}
+            onRetry={() => {
+              void flushSave();
+            }}
+          />
+          <span className="text-[11px] text-zinc-500">
+            {document ? `Rev ${document.revision} • LaTeX • UTF-8` : 'LaTeX • UTF-8'}
+          </span>
+        </div>
       </div>
-      <div className="flex-1 p-4 font-mono text-xs overflow-auto text-gray-800 dark:text-gray-100 bg-white dark:bg-[#050807] relative">
+
+      {/* CodeMirror 6 LaTeX Editor */}
+      <div className="flex-1 overflow-hidden relative bg-[#050807]">
         {isLoading ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-[#050807]/80">
+          <div className="absolute inset-0 flex items-center justify-center bg-[#050807]/80 z-20">
             <Loader2 className="h-6 w-6 animate-spin text-[#00D69A]" />
           </div>
         ) : (
-          <textarea
+          <CodeMirrorEditor
+            ref={editorHandleRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full h-full resize-none font-mono text-xs leading-relaxed outline-none border-none p-0 focus:ring-0 bg-transparent text-gray-900 dark:text-[#E2E8F0] placeholder-gray-400 dark:placeholder-gray-600"
-            spellCheck={false}
-            placeholder="Enter LaTeX document content..."
+            onChange={setContent}
+            diagnostics={diagnostics}
+            onCompile={() => {
+              void compileRef.current?.();
+            }}
+            className="w-full h-full"
           />
         )}
       </div>
+
+      {/* Docked Tools Panel */}
+      <ToolsPanel
+        isOpen={isToolsOpen}
+        onToggleOpen={() => setIsToolsOpen((prev) => !prev)}
+        activeTab={toolsActiveTab}
+        onSelectTab={setToolsActiveTab}
+        diagnostics={diagnostics}
+        logData={selectedLog}
+        onNavigateToLine={handleNavigateToProblem}
+        currentEngine={project?.engine || 'PDFLATEX'}
+        currentBibTool={project?.bibTool || 'AUTO'}
+        autoCompileEnabled={project?.autoCompile ?? false}
+        mainFileName={document?.path || 'main.tex'}
+        onUpdateSettings={handleUpdateSettings}
+      />
     </div>
   );
 
   // Reusable PDF Preview Component
   const renderPdfContent = () => (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-[#050807] overflow-hidden">
-      {/* PDF Viewer Header */}
-      <div className="h-9 border-b border-gray-200 dark:border-[#00D69A]/15 px-3 flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-[#0A1310]">
-        <span className="font-medium flex items-center gap-1.5">
-          <FileText className="h-3.5 w-3.5 text-[#00D69A]" /> PDF Preview
-          {pageCount && (
-            <span className="text-[11px] font-normal text-gray-400 dark:text-[#00D69A]/60">
-              ({pageCount} page{pageCount > 1 ? 's' : ''})
-            </span>
-          )}
-        </span>
-        <div className="flex items-center gap-2">
-          {pdfUrl && (
-            <>
-              <a
-                href={pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] text-[#00D69A] hover:underline flex items-center gap-1 font-medium"
-                title="Open PDF in new tab"
-              >
-                <ExternalLink className="h-3 w-3" /> Pop out
-              </a>
-              <a
-                href={pdfUrl}
-                download={`${project?.name || 'document'}.pdf`}
-                className="text-[11px] text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-[#00D69A] flex items-center gap-1 p-1 rounded"
-                title="Download PDF"
-              >
-                <Download className="h-3.5 w-3.5" />
-              </a>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* PDF Viewer Content Area */}
-      <div className="flex-1 relative flex flex-col items-center justify-center bg-gray-100 dark:bg-[#050807] overflow-hidden p-4">
-        {isCompiling ? (
-          <div className="flex flex-col items-center justify-center p-6 text-center rounded-2xl bg-white dark:bg-[#0A1310] border border-gray-200 dark:border-[#00D69A]/20 shadow-[0_0_20px_rgba(0,214,154,0.08)] max-w-sm">
-            <Loader2 className="h-8 w-8 animate-spin text-[#00D69A] mb-3" />
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-              Compiling document...
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Executing LaTeX engine inside container sandbox
-            </p>
-          </div>
-        ) : isLoadingPdf ? (
-          <div className="flex flex-col items-center justify-center p-6 text-center">
-            <Loader2 className="h-6 w-6 animate-spin text-[#00D69A] mb-2" />
-            <p className="text-xs text-gray-500 dark:text-gray-400">Loading PDF preview...</p>
-          </div>
-        ) : pdfUrl ? (
-          <iframe
-            src={pdfUrl}
-            className="w-full h-full border-0 bg-white rounded-lg shadow-sm"
-            title="Compiled PDF Preview"
-          />
-        ) : currentCompilation?.status === 'FAILED' ? (
-          <div className="border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 rounded-2xl p-6 max-w-sm text-center shadow-lg">
-            <AlertCircle className="h-8 w-8 text-rose-500 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-rose-800 dark:text-rose-200 mb-1">
-              Compilation Failed
-            </p>
-            <p className="text-xs text-rose-600 dark:text-rose-400">
-              {currentCompilation.errorCount > 0
-                ? `${currentCompilation.errorCount} error(s) found during compilation. Check the error log.`
-                : 'LaTeX process exited with errors. Check log.'}
-            </p>
-          </div>
-        ) : (
-          <div className="border border-dashed border-gray-300 dark:border-[#00D69A]/20 rounded-2xl p-8 max-w-sm text-center bg-white dark:bg-[#0A1310] shadow-sm">
-            <FileText className="h-8 w-8 text-gray-400 dark:text-[#00D69A]/60 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">
-              No PDF preview yet
-            </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              Trigger a compilation using{' '}
-              <kbd className="font-mono bg-gray-100 dark:bg-[#003D30] text-gray-800 dark:text-[#00D69A] px-1.5 py-0.5 rounded text-[11px] border border-gray-200 dark:border-[#00D69A]/30">
-                Mod-Enter
-              </kbd>{' '}
-              or the Compile button above.
-            </p>
-          </div>
-        )}
-      </div>
+    <div className="flex-1 flex flex-col h-full bg-[#050807] overflow-hidden">
+      <PdfViewer
+        pdfUrl={pdfUrl}
+        compilation={currentCompilation ?? lastSuccessCompilation}
+        isCompiling={isCompiling}
+        projectName={project?.name || 'document'}
+        onCompile={() => {
+          void compileRef.current?.();
+        }}
+        className="flex-1"
+      />
     </div>
   );
 
@@ -428,8 +489,21 @@ function WorkspaceContent() {
           <CompileToolbar
             projectId={projectId}
             defaultEngine={project?.engine || 'PDFLATEX'}
+            autoCompile={project?.autoCompile ?? false}
             onFlushSave={flushSave}
             onCompilationChange={handleCompilationChange}
+            onDiagnosticsChange={handleDiagnosticsChange}
+            onOpenToolsTab={(tab) => {
+              setIsToolsOpen(true);
+              setToolsActiveTab(tab);
+            }}
+            onChangeEngine={(eng) => {
+              void handleUpdateSettings({ engine: eng });
+            }}
+            onToggleAutoCompile={(enabled) => {
+              void handleUpdateSettings({ autoCompile: enabled });
+            }}
+            compileRef={compileRef}
           />
         </div>
       </header>

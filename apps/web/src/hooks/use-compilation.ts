@@ -1,5 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type { CompilationDTO, CompilationLogDTO, Engine } from '@texly/shared';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import type {
+  CompilationDTO,
+  CompilationLogDTO,
+  CompilationDiagnostic,
+  Engine,
+  CompilationQueuedEvent,
+  CompilationStartedEvent,
+  CompilationFinishedEvent,
+} from '@texly/shared';
 import {
   triggerCompilation,
   fetchCompilation,
@@ -10,6 +18,7 @@ import {
   cancelCompilation,
   formatCompilationError,
 } from '@/lib/compilations';
+import { socketClient, type SocketConnectionStatus } from '@/lib/socket-client';
 
 export interface UseCompilationOptions {
   projectId: string;
@@ -38,11 +47,25 @@ export function useCompilation({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<CompilationLogDTO | null>(null);
   const [isLoadingLog, setIsLoadingLog] = useState(false);
+  const [socketStatus, setSocketStatus] = useState<SocketConnectionStatus>(
+    socketClient.getStatus(),
+  );
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pollAttemptRef = useRef(0);
   const isMountedRef = useRef(true);
   const isBusyRef = useRef(false);
+  const activeCompilationIdRef = useRef<string | null>(null);
+
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+  const onFlushSaveRef = useRef(onFlushSave);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+    onFlushSaveRef.current = onFlushSave;
+  });
 
   // Clear polling timer safely
   const clearPollTimer = useCallback(() => {
@@ -69,6 +92,229 @@ export function useCompilation({
     }
   }, [projectId]);
 
+  // View compilation log & diagnostics
+  const viewLog = useCallback(async (compilationId: string) => {
+    setIsLoadingLog(true);
+    try {
+      const log = await fetchCompilationLog(compilationId);
+      if (isMountedRef.current) {
+        setSelectedLog(log);
+      }
+      return log;
+    } catch (err) {
+      const msg = formatCompilationError(err);
+      if (isMountedRef.current) {
+        setErrorMessage(`Failed to load log: ${msg}`);
+      }
+      return null;
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoadingLog(false);
+      }
+    }
+  }, []);
+
+  // Polling step with backoff
+  const pollCompilationStatus = useCallback(
+    async (compilationId: string) => {
+      if (!isMountedRef.current) return;
+
+      try {
+        const updated = await fetchCompilation(compilationId);
+        if (!isMountedRef.current) return;
+
+        setCurrentCompilation(updated);
+
+        const isTerminal =
+          updated.status === 'SUCCEEDED' ||
+          updated.status === 'FAILED' ||
+          updated.status === 'CANCELLED' ||
+          updated.status === 'TIMED_OUT';
+
+        if (isTerminal) {
+          isBusyRef.current = false;
+          setIsCompiling(false);
+          activeCompilationIdRef.current = null;
+          clearPollTimer();
+
+          if (updated.status === 'SUCCEEDED') {
+            setLastSuccessfulCompilation(updated);
+            onSuccessRef.current?.(updated);
+          } else if (updated.status === 'FAILED' || updated.status === 'TIMED_OUT') {
+            const msg = updated.errorCode
+              ? formatCompilationError(new Error(updated.errorCode))
+              : 'Compilation failed with errors. Check the log for details.';
+            setErrorMessage(msg);
+            onErrorRef.current?.(msg);
+          }
+
+          // Fetch diagnostics and logs automatically
+          void viewLog(updated.id);
+          void refreshHistory();
+          return;
+        }
+
+        // Schedule next poll with backoff
+        pollAttemptRef.current += 1;
+        const delay =
+          BACKOFF_DELAYS[Math.min(pollAttemptRef.current, BACKOFF_DELAYS.length - 1)] ?? 10000;
+
+        pollTimerRef.current = setTimeout(() => {
+          void pollCompilationStatus(compilationId);
+        }, delay);
+      } catch {
+        if (!isMountedRef.current) return;
+        pollAttemptRef.current += 1;
+        if (pollAttemptRef.current > 15) {
+          isBusyRef.current = false;
+          setIsCompiling(false);
+          activeCompilationIdRef.current = null;
+          setErrorMessage('Lost connection while checking compilation status.');
+          clearPollTimer();
+        } else {
+          pollTimerRef.current = setTimeout(() => {
+            void pollCompilationStatus(compilationId);
+          }, 10000);
+        }
+      }
+    },
+    [clearPollTimer, refreshHistory, viewLog],
+  );
+
+  const startPolling = useCallback(
+    (compilationId: string) => {
+      clearPollTimer();
+      activeCompilationIdRef.current = compilationId;
+      pollAttemptRef.current = 0;
+      const initialDelay = BACKOFF_DELAYS[0] ?? 2000;
+      pollTimerRef.current = setTimeout(() => {
+        void pollCompilationStatus(compilationId);
+      }, initialDelay);
+    },
+    [clearPollTimer, pollCompilationStatus],
+  );
+
+  // Subscribe to socket events and connection state
+  useEffect(() => {
+    if (!projectId) return;
+
+    // Track connection state
+    const unsubscribeStatus = socketClient.subscribeStatus((status) => {
+      if (isMountedRef.current) {
+        setSocketStatus(status);
+        // On reconnect, catch up with latest compilation status
+        if (status === 'connected') {
+          fetchLatestCompilation(projectId)
+            .then((latest) => {
+              if (!isMountedRef.current || !latest) return;
+              setCurrentCompilation(latest);
+              if (latest.status === 'SUCCEEDED') {
+                setLastSuccessfulCompilation(latest);
+              }
+              if (latest.status === 'QUEUED' || latest.status === 'RUNNING') {
+                setIsCompiling(true);
+                activeCompilationIdRef.current = latest.id;
+              } else {
+                setIsCompiling(false);
+                activeCompilationIdRef.current = null;
+                clearPollTimer();
+              }
+            })
+            .catch(() => {});
+        }
+      }
+    });
+
+    socketClient.joinProject(projectId);
+
+    // Event handlers
+    const unsubQueued = socketClient.onCompilationQueued((event: CompilationQueuedEvent) => {
+      if (!isMountedRef.current || event.projectId !== projectId) return;
+      setIsCompiling(true);
+      activeCompilationIdRef.current = event.compilationId;
+      setErrorMessage(null);
+      setCurrentCompilation((prev) =>
+        prev && prev.id === event.compilationId
+          ? { ...prev, status: 'QUEUED' }
+          : ({
+              id: event.compilationId,
+              projectId: event.projectId,
+              status: 'QUEUED',
+              engine: prev?.engine ?? defaultEngine,
+              trigger: prev?.trigger ?? 'MANUAL',
+              errorCount: 0,
+              warningCount: 0,
+              hasPdf: prev?.hasPdf ?? false,
+              cacheHit: false,
+              createdAt: event.timestamp,
+              finishedAt: null,
+              durationMs: null,
+              sizeBytes: null,
+              errorCode: null,
+            } as unknown as CompilationDTO),
+      );
+    });
+
+    const unsubStarted = socketClient.onCompilationStarted((event: CompilationStartedEvent) => {
+      if (!isMountedRef.current || event.projectId !== projectId) return;
+      setIsCompiling(true);
+      activeCompilationIdRef.current = event.compilationId;
+      setCurrentCompilation((prev) => (prev ? { ...prev, status: 'RUNNING' } : null));
+    });
+
+    const unsubFinished = socketClient.onCompilationFinished((event: CompilationFinishedEvent) => {
+      if (!isMountedRef.current || event.projectId !== projectId) return;
+      clearPollTimer();
+      isBusyRef.current = false;
+      setIsCompiling(false);
+      activeCompilationIdRef.current = null;
+
+      // Fetch full details
+      fetchCompilation(event.compilationId)
+        .then((full) => {
+          if (!isMountedRef.current) return;
+          setCurrentCompilation(full);
+
+          if (full.status === 'SUCCEEDED') {
+            setLastSuccessfulCompilation(full);
+            onSuccessRef.current?.(full);
+          } else if (full.status === 'FAILED' || full.status === 'TIMED_OUT') {
+            const msg = full.errorCode
+              ? formatCompilationError(new Error(full.errorCode))
+              : 'Compilation failed with errors. Check the log for details.';
+            setErrorMessage(msg);
+            onErrorRef.current?.(msg);
+          }
+
+          void viewLog(full.id);
+          void refreshHistory();
+        })
+        .catch(() => {
+          if (!isMountedRef.current) return;
+          setCurrentCompilation((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: event.status,
+                  hasPdf: event.hasPdf ?? false,
+                  errorCount: event.errorCount ?? 0,
+                  warningCount: event.warningCount ?? 0,
+                }
+              : null,
+          );
+          void refreshHistory();
+        });
+    });
+
+    return () => {
+      unsubscribeStatus();
+      unsubQueued();
+      unsubStarted();
+      unsubFinished();
+      socketClient.leaveProject(projectId);
+    };
+  }, [projectId, defaultEngine, clearPollTimer, refreshHistory, viewLog]);
+
   // Load initial latest compilation and history on mount or project switch
   useEffect(() => {
     isMountedRef.current = true;
@@ -86,7 +332,11 @@ export function useCompilation({
           }
           if (latest.status === 'QUEUED' || latest.status === 'RUNNING') {
             setIsCompiling(true);
+            activeCompilationIdRef.current = latest.id;
             startPolling(latest.id);
+          } else {
+            // Load logs for the latest compilation
+            void viewLog(latest.id);
           }
         }
         await refreshHistory();
@@ -103,88 +353,16 @@ export function useCompilation({
       isMountedRef.current = false;
       clearPollTimer();
     };
-  }, [projectId, clearPollTimer, refreshHistory]);
-
-  // Polling step with backoff
-  const pollCompilationStatus = useCallback(
-    async (compilationId: string) => {
-      if (!isMountedRef.current) return;
-
-      try {
-        const updated = await fetchCompilation(compilationId);
-        if (!isMountedRef.current) return;
-
-        setCurrentCompilation(updated);
-
-        const isTerminal =
-          updated.status === 'SUCCEEDED' ||
-          updated.status === 'FAILED' ||
-          updated.status === 'CANCELLED';
-
-        if (isTerminal) {
-          isBusyRef.current = false;
-          setIsCompiling(false);
-          clearPollTimer();
-
-          if (updated.status === 'SUCCEEDED') {
-            setLastSuccessfulCompilation(updated);
-            onSuccess?.(updated);
-          } else if (updated.status === 'FAILED') {
-            const msg = updated.errorCode
-              ? formatCompilationError(new Error(updated.errorCode))
-              : 'Compilation failed with errors. Check the log for details.';
-            setErrorMessage(msg);
-            onError?.(msg);
-          }
-
-          void refreshHistory();
-          return;
-        }
-
-        // Schedule next poll with backoff
-        pollAttemptRef.current += 1;
-        const delay =
-          BACKOFF_DELAYS[Math.min(pollAttemptRef.current, BACKOFF_DELAYS.length - 1)] ?? 10000;
-
-        pollTimerRef.current = setTimeout(() => {
-          void pollCompilationStatus(compilationId);
-        }, delay);
-      } catch {
-        if (!isMountedRef.current) return;
-        // On error, try one more time with max delay or stop
-        pollAttemptRef.current += 1;
-        if (pollAttemptRef.current > 15) {
-          isBusyRef.current = false;
-          setIsCompiling(false);
-          setErrorMessage('Lost connection while checking compilation status.');
-          clearPollTimer();
-        } else {
-          pollTimerRef.current = setTimeout(() => {
-            void pollCompilationStatus(compilationId);
-          }, 10000);
-        }
-      }
-    },
-    [clearPollTimer, onSuccess, onError, refreshHistory],
-  );
-
-  const startPolling = useCallback(
-    (compilationId: string) => {
-      clearPollTimer();
-      pollAttemptRef.current = 0;
-      const initialDelay = BACKOFF_DELAYS[0] ?? 2000;
-      pollTimerRef.current = setTimeout(() => {
-        void pollCompilationStatus(compilationId);
-      }, initialDelay);
-    },
-    [clearPollTimer, pollCompilationStatus],
-  );
+  }, [projectId, clearPollTimer, refreshHistory, startPolling, viewLog]);
 
   // Main compile action
   const compile = useCallback(
-    async (engineOverride?: Engine) => {
+    async (
+      engineOverride?: Engine,
+      bypassCache = false,
+      trigger: 'MANUAL' | 'AUTO' | 'AI_ACCEPT' | 'RESTORE' = 'MANUAL',
+    ) => {
       if (isBusyRef.current || isCompiling || isSaving) {
-        // Prevent accidental duplicate requests from repeated clicks
         return;
       }
 
@@ -192,15 +370,15 @@ export function useCompilation({
       setErrorMessage(null);
 
       // Step 1: Flush pending autosave before starting compilation
-      if (onFlushSave) {
+      if (onFlushSaveRef.current) {
         setIsSaving(true);
         try {
-          const saveSuccess = await onFlushSave();
+          const saveSuccess = await onFlushSaveRef.current();
           if (!saveSuccess) {
             isBusyRef.current = false;
             setIsSaving(false);
             setErrorMessage('Unable to save changes before compiling. Please check for conflicts.');
-            onError?.('Save failed before compilation.');
+            onErrorRef.current?.('Save failed before compilation.');
             return;
           }
         } catch (err) {
@@ -208,7 +386,7 @@ export function useCompilation({
           setIsSaving(false);
           const msg = formatCompilationError(err);
           setErrorMessage(`Save failed: ${msg}`);
-          onError?.(msg);
+          onErrorRef.current?.(msg);
           return;
         } finally {
           setIsSaving(false);
@@ -221,45 +399,55 @@ export function useCompilation({
         const engine = engineOverride || defaultEngine;
         const compilation = await triggerCompilation(projectId, {
           engine,
-          trigger: 'MANUAL',
+          trigger,
           draft: false,
         });
 
         if (!isMountedRef.current) return;
         setCurrentCompilation(compilation);
+        activeCompilationIdRef.current = compilation.id;
 
         // Immediate cache hit
-        if (compilation.cacheHit || compilation.status === 'SUCCEEDED') {
+        if (!bypassCache && (compilation.cacheHit || compilation.status === 'SUCCEEDED')) {
           isBusyRef.current = false;
           setIsCompiling(false);
+          activeCompilationIdRef.current = null;
           setLastSuccessfulCompilation(compilation);
-          onSuccess?.(compilation);
+          onSuccessRef.current?.(compilation);
+          void viewLog(compilation.id);
           void refreshHistory();
           return;
         }
 
-        // Active job: begin REST polling
+        // Always start a backup polling timer in case socket events are delayed/lost
         startPolling(compilation.id);
       } catch (err) {
         isBusyRef.current = false;
+        activeCompilationIdRef.current = null;
         if (!isMountedRef.current) return;
         setIsCompiling(false);
         const msg = formatCompilationError(err);
         setErrorMessage(msg);
-        onError?.(msg);
+        onErrorRef.current?.(msg);
       }
     },
     [
       isCompiling,
       isSaving,
-      onFlushSave,
       defaultEngine,
       projectId,
-      onSuccess,
-      onError,
       refreshHistory,
       startPolling,
+      viewLog,
     ],
+  );
+
+  // Recompile from scratch (bypass cache)
+  const recompileFromScratch = useCallback(
+    async (engineOverride?: Engine) => {
+      return compile(engineOverride, true, 'MANUAL');
+    },
+    [compile],
   );
 
   // Cancel compilation action
@@ -271,6 +459,7 @@ export function useCompilation({
       clearPollTimer();
       isBusyRef.current = false;
       setIsCompiling(false);
+      activeCompilationIdRef.current = null;
       setCurrentCompilation(updated);
       void refreshHistory();
     } catch (err) {
@@ -278,20 +467,6 @@ export function useCompilation({
       setErrorMessage(`Failed to cancel: ${msg}`);
     }
   }, [currentCompilation, isCompiling, clearPollTimer, refreshHistory]);
-
-  // View compilation log
-  const viewLog = useCallback(async (compilationId: string) => {
-    setIsLoadingLog(true);
-    try {
-      const log = await fetchCompilationLog(compilationId);
-      setSelectedLog(log);
-    } catch (err) {
-      const msg = formatCompilationError(err);
-      setErrorMessage(`Failed to load log: ${msg}`);
-    } finally {
-      setIsLoadingLog(false);
-    }
-  }, []);
 
   // Download PDF helper
   const downloadPdf = useCallback(
@@ -327,6 +502,19 @@ export function useCompilation({
     };
   }, [compile]);
 
+  const diagnostics: CompilationDiagnostic[] = useMemo(() => {
+    return selectedLog?.diagnostics ?? [];
+  }, [selectedLog]);
+
+  const diagnosticCounts = useMemo(() => {
+    if (selectedLog?.counts) {
+      return selectedLog.counts;
+    }
+    const errors = diagnostics.filter((d) => d.level === 'error').length;
+    const warnings = diagnostics.filter((d) => d.level === 'warning').length;
+    return { errors, warnings };
+  }, [selectedLog, diagnostics]);
+
   return {
     currentCompilation,
     lastSuccessfulCompilation,
@@ -336,7 +524,11 @@ export function useCompilation({
     errorMessage,
     selectedLog,
     isLoadingLog,
+    socketStatus,
+    diagnostics,
+    diagnosticCounts,
     compile,
+    recompileFromScratch,
     cancel,
     refreshHistory,
     viewLog,
@@ -345,3 +537,4 @@ export function useCompilation({
     clearError: () => setErrorMessage(null),
   };
 }
+export type UseCompilationReturn = ReturnType<typeof useCompilation>;

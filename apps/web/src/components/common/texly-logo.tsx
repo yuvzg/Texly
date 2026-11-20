@@ -16,7 +16,12 @@ export function TexlyLogo({
   className = '',
 }: TexlyLogoProps) {
   const dim = size === 'sm' ? 24 : size === 'lg' ? 42 : 32;
-  const textSize = size === 'sm' ? 'text-sm font-semibold' : size === 'lg' ? 'text-2xl font-bold' : 'text-lg font-bold';
+  const textSize =
+    size === 'sm'
+      ? 'text-sm font-semibold'
+      : size === 'lg'
+        ? 'text-2xl font-bold'
+        : 'text-lg font-bold';
 
   return (
     <div className={`flex items-center gap-2.5 select-none ${className}`}>
@@ -47,4 +52,3 @@ export function TexlyLogo({
     </div>
   );
 }
-

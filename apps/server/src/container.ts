@@ -59,9 +59,12 @@ import {
   createProjectsRouter,
 } from './modules/projects/index.js';
 import {
-  WorkspacesController,
-  createWorkspacesRouter,
-} from './modules/workspaces/index.js';
+  FilesRepository,
+  FilesService,
+  FilesController,
+  createFilesRouter,
+} from './modules/files/index.js';
+import { WorkspacesController, createWorkspacesRouter } from './modules/workspaces/index.js';
 
 export interface ContainerDependencies {
   db?: DatabaseInstance | undefined;
@@ -154,6 +157,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
   const workspacesRepo = new WorkspacesRepository(db.client);
   const compilationsRepo = new CompilationsRepository(db.client);
   const documentsRepo = new DocumentsRepository(db.client);
+  const filesRepo = new FilesRepository(db.client);
   const projectsRepo = new ProjectsRepository(db.client);
 
   // Password & Breached check
@@ -218,6 +222,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
   );
 
   const documentsService = new DocumentsService(documentsRepo, realtimeEmitter);
+  const filesService = new FilesService(filesRepo, realtimeEmitter);
   const projectsService = new ProjectsService(projectsRepo, workspacesRepo);
 
   // Cookie configuration
@@ -232,6 +237,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
   const usersController = new UsersController(usersRepo, userSettingsRepo, workspacesRepo);
   const compilationsController = new CompilationsController(compilationsService);
   const documentsController = new DocumentsController(documentsService);
+  const filesController = new FilesController(filesService);
   const projectsController = new ProjectsController(projectsService);
   const workspacesController = new WorkspacesController(workspacesRepo);
 
@@ -285,6 +291,12 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     originMiddleware,
   });
 
+  const filesRouter = createFilesRouter({
+    controller: filesController,
+    authMiddleware,
+    originMiddleware,
+  });
+
   const projectsRouter = createProjectsRouter({
     controller: projectsController,
     authMiddleware,
@@ -312,6 +324,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     workspacesRepo,
     compilationsRepo,
     documentsRepo,
+    filesRepo,
     projectsRepo,
     passwordService,
     jwtService,
@@ -320,11 +333,13 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     authService,
     compilationsService,
     documentsService,
+    filesService,
     projectsService,
     authController,
     usersController,
     compilationsController,
     documentsController,
+    filesController,
     projectsController,
     workspacesController,
     compilationsWorker,
@@ -337,6 +352,7 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
     projectCompilationsRouter,
     compilationsRouter,
     documentsRouter,
+    filesRouter,
     projectsRouter,
     workspacesRouter,
   };

@@ -83,7 +83,9 @@ function RegisterContent() {
       <div className="space-y-5">
         <div className="space-y-1 text-center sm:text-left">
           <h2 className="text-2xl font-bold tracking-tight text-white">Create an account</h2>
-          <p className="text-sm text-[#94A3B8]">Sign up to start drafting LaTeX documents with AI</p>
+          <p className="text-sm text-[#94A3B8]">
+            Sign up to start drafting LaTeX documents with AI
+          </p>
         </div>
 
         {apiError && <AuthAlert variant="error" message={apiError} />}

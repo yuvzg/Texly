@@ -8,7 +8,10 @@ export interface TemplateFile {
   content: string;
 }
 
-export function getTemplateFiles(template: ProjectTemplate = 'blank', projectName: string): TemplateFile[] {
+export function getTemplateFiles(
+  template: ProjectTemplate = 'blank',
+  projectName: string,
+): TemplateFile[] {
   switch (template) {
     case 'article':
       return [
@@ -270,4 +273,3 @@ function escapeLatex(text: string): string {
     .replace(/[{}]/g, '\\$&')
     .replace(/[$%_&#^]/g, '\\$&');
 }
-

@@ -33,7 +33,10 @@ export function NewWorkspaceModal({ isOpen, onClose, onWorkspaceCreated }: NewWo
 
     try {
       const generatedSlug = slug.trim()
-        ? slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-')
+        ? slug
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9-]+/g, '-')
         : undefined;
 
       const created = await createWorkspace({
@@ -56,10 +59,11 @@ export function NewWorkspaceModal({ isOpen, onClose, onWorkspaceCreated }: NewWo
     }
   };
 
-  const previewSlug = (slug || name)
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-|-$/g, '') || 'workspace-slug';
+  const previewSlug =
+    (slug || name)
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/^-|-$/g, '') || 'workspace-slug';
 
   return (
     <div
@@ -77,7 +81,9 @@ export function NewWorkspaceModal({ isOpen, onClose, onWorkspaceCreated }: NewWo
               <Layers className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-base font-heading tracking-tight">Create Workspace</h3>
+              <h3 className="font-bold text-white text-base font-heading tracking-tight">
+                Create Workspace
+              </h3>
               <p className="text-xs text-[#94A3B8]">Organize projects with your team</p>
             </div>
           </div>
@@ -112,7 +118,8 @@ export function NewWorkspaceModal({ isOpen, onClose, onWorkspaceCreated }: NewWo
 
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-white">
-              Workspace URL Slug <span className="text-[10px] text-[#94A3B8] font-normal">(optional)</span>
+              Workspace URL Slug{' '}
+              <span className="text-[10px] text-[#94A3B8] font-normal">(optional)</span>
             </label>
             <input
               type="text"
@@ -161,4 +168,3 @@ export function NewWorkspaceModal({ isOpen, onClose, onWorkspaceCreated }: NewWo
     </div>
   );
 }
-

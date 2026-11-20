@@ -38,4 +38,3 @@ export const ResizableHandle = ({
     )}
   </ResizablePrimitive.PanelResizeHandle>
 );
-

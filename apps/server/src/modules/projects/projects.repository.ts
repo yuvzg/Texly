@@ -1,5 +1,12 @@
 import { createHash } from 'node:crypto';
-import type { PrismaClient, Project, ProjectMember, LatexEngine, BibTool, ProjectRole } from '@texly/db';
+import type {
+  PrismaClient,
+  Project,
+  ProjectMember,
+  LatexEngine,
+  BibTool,
+  ProjectRole,
+} from '@texly/db';
 import type { ProjectDTO, ProjectTemplate, Engine } from '@texly/shared';
 import { AppError } from '../../http/middleware/error-handler.js';
 import { ErrorCodeEnum } from '@texly/shared';
@@ -28,7 +35,14 @@ export class ProjectsRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   public async createProject(params: CreateProjectParams): Promise<ProjectDTO> {
-    const { workspaceId, userId, name, description, template = 'blank', engine = 'PDFLATEX' } = params;
+    const {
+      workspaceId,
+      userId,
+      name,
+      description,
+      template = 'blank',
+      engine = 'PDFLATEX',
+    } = params;
 
     // Verify workspace exists and user is a member
     const membership = await this.prisma.workspaceMember.findFirst({
@@ -160,7 +174,10 @@ export class ProjectsRepository {
     return this.mapToDTO(createdProject, 'OWNER');
   }
 
-  public async findProjectsByUser(userId: string, options: ListProjectsOptions = {}): Promise<ProjectDTO[]> {
+  public async findProjectsByUser(
+    userId: string,
+    options: ListProjectsOptions = {},
+  ): Promise<ProjectDTO[]> {
     const { workspaceId, trashed = false, query } = options;
 
     const memberProjects = await this.prisma.projectMember.findMany({
@@ -192,6 +209,67 @@ export class ProjectsRepository {
     return memberProjects.map((mp) => this.mapToDTO(mp.project, mp.role));
   }
 
+  public async updateProject(
+    projectId: string,
+    userId: string,
+    data: {
+      name?: string | undefined;
+      description?: string | null | undefined;
+      engine?: Engine | undefined;
+      bibTool?: BibTool | undefined;
+      mainFileId?: string | null | undefined;
+      autoCompile?: boolean | undefined;
+    },
+  ): Promise<ProjectDTO> {
+    const memberProject = await this.prisma.projectMember.findFirst({
+      where: {
+        projectId,
+        userId,
+      },
+    });
+
+    if (!memberProject || (memberProject.role !== 'OWNER' && memberProject.role !== 'EDITOR')) {
+      throw new AppError(
+        ErrorCodeEnum.FORBIDDEN,
+        403,
+        'You do not have permission to modify this project.',
+      );
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (data.name !== undefined) updateData['name'] = data.name;
+    if (data.description !== undefined) updateData['description'] = data.description;
+    if (data.engine !== undefined) updateData['engine'] = data.engine;
+    if (data.bibTool !== undefined) updateData['bibTool'] = data.bibTool;
+    if (data.mainFileId !== undefined) {
+      if (data.mainFileId !== null) {
+        const file = await this.prisma.projectFile.findFirst({
+          where: {
+            id: data.mainFileId,
+            projectId,
+            deletedAt: null,
+          },
+        });
+        if (!file || file.kind !== 'TEXT' || !file.name.endsWith('.tex')) {
+          throw new AppError(
+            ErrorCodeEnum.INVALID_MAIN_FILE,
+            422,
+            'Main file must be an active .tex text document within the project.',
+          );
+        }
+      }
+      updateData['mainFileId'] = data.mainFileId;
+    }
+    if (data.autoCompile !== undefined) updateData['autoCompile'] = data.autoCompile;
+
+    const updated = await this.prisma.project.update({
+      where: { id: projectId },
+      data: updateData,
+    });
+
+    return this.mapToDTO(updated, memberProject.role);
+  }
+
   public async findProjectById(projectId: string, userId: string): Promise<ProjectDTO | null> {
     const memberProject = await this.prisma.projectMember.findFirst({
       where: {
@@ -219,7 +297,11 @@ export class ProjectsRepository {
     });
 
     if (!memberProject || memberProject.role !== 'OWNER') {
-      throw new AppError(ErrorCodeEnum.FORBIDDEN, 403, 'Only project owners can delete this project.');
+      throw new AppError(
+        ErrorCodeEnum.FORBIDDEN,
+        403,
+        'Only project owners can delete this project.',
+      );
     }
 
     await this.prisma.$transaction([

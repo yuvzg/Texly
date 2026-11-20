@@ -34,4 +34,3 @@ export function createWorkspacesRouter(options: WorkspacesRouterOptions): Router
 
   return router;
 }
-

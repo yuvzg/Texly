@@ -86,7 +86,11 @@ function VerifyEmailContent() {
 
       {status === 'error' && (
         <div className="space-y-4">
-          <AuthAlert variant="error" title="Verification Failed" message={errorMessage || 'Failed to verify email.'} />
+          <AuthAlert
+            variant="error"
+            title="Verification Failed"
+            message={errorMessage || 'Failed to verify email.'}
+          />
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -136,7 +140,10 @@ function VerifyEmailContent() {
       )}
 
       <div className="text-center pt-2 border-t border-[#00D69A]/10">
-        <Link href="/login" className="inline-flex items-center gap-1.5 text-xs text-[#00D69A] hover:underline">
+        <Link
+          href="/login"
+          className="inline-flex items-center gap-1.5 text-xs text-[#00D69A] hover:underline"
+        >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to sign in
         </Link>

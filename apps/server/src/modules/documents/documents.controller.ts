@@ -7,11 +7,7 @@ import { ErrorCodeEnum } from '@texly/shared';
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
-  public getDocument = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  public getDocument = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user?.id;
       if (!userId) {
@@ -70,11 +66,7 @@ export class DocumentsController {
     }
   };
 
-  public saveContent = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  public saveContent = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user?.id;
       if (!userId) {
@@ -110,4 +102,3 @@ export class DocumentsController {
     }
   };
 }
-

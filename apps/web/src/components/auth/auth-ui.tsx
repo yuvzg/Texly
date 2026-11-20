@@ -56,7 +56,8 @@ export function AuthAlert({ variant, title, message, className }: AuthAlertProps
       className={cn(
         'p-3.5 rounded-xl border text-sm flex items-start gap-2.5 backdrop-blur-sm',
         isError && 'bg-rose-950/40 border-rose-900/60 text-rose-200',
-        isSuccess && 'bg-[#003D30]/60 border-[#00D69A]/40 text-[#ECFDF5] shadow-[0_0_15px_rgba(0,214,154,0.1)]',
+        isSuccess &&
+          'bg-[#003D30]/60 border-[#00D69A]/40 text-[#ECFDF5] shadow-[0_0_15px_rgba(0,214,154,0.1)]',
         variant === 'info' && 'bg-[#0A1310] border-[#00D69A]/25 text-[#ECFDF5]',
         className,
       )}

@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
         source: '/api/:path*',
         destination: `${process.env.API_URL || 'http://localhost:4000'}/api/:path*`,
       },
+      {
+        source: '/socket.io/:path*',
+        destination: `${process.env.API_URL || 'http://localhost:4000'}/socket.io/:path*`,
+      },
     ];
   },
 };

@@ -5,6 +5,7 @@ import type {
   CompilationStartedEvent,
   CompilationFinishedEvent,
   DocumentRevisionChangedEvent,
+  FileTreeChangedEvent,
 } from '@texly/shared';
 import { logger } from '../logging/logger.js';
 
@@ -93,6 +94,26 @@ export class RealtimeEmitter {
   public async emitDocumentRevisionChanged(event: DocumentRevisionChangedEvent): Promise<void> {
     const room = `project:${event.projectId}`;
     const eventName = 'document.revision.changed';
+
+    if (this.io) {
+      this.io.to(room).emit(eventName, event);
+    }
+
+    if (this.redisPublisher) {
+      try {
+        await this.redisPublisher.publish(
+          'realtime:events',
+          JSON.stringify({ room, eventName, payload: event }),
+        );
+      } catch (err) {
+        logger.warn({ err, event }, 'Failed to publish realtime event to Redis');
+      }
+    }
+  }
+
+  public async emitFileTreeChanged(event: FileTreeChangedEvent): Promise<void> {
+    const room = `project:${event.projectId}`;
+    const eventName = 'file.tree.changed';
 
     if (this.io) {
       this.io.to(room).emit(eventName, event);

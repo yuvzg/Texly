@@ -24,7 +24,13 @@ export const CreateFileRequestSchema = z
   .object({
     nodeType: NodeTypeSchema,
     parentId: FileIdSchema.nullable().default(null),
-    name: z.string().min(1).max(255).trim(),
+    name: z
+      .string()
+      .min(1)
+      .max(255)
+      .refine((val) => val === val.trim(), {
+        message: 'File or folder name cannot have leading or trailing whitespace',
+      }),
     content: z
       .string()
       .max(2 * 1024 * 1024, { message: 'Initial content must be <= 2MB' })
@@ -35,7 +41,14 @@ export type CreateFileRequest = z.infer<typeof CreateFileRequestSchema>;
 
 export const UpdateFileRequestSchema = z
   .object({
-    name: z.string().min(1).max(255).trim().optional(),
+    name: z
+      .string()
+      .min(1)
+      .max(255)
+      .refine((val) => val === val.trim(), {
+        message: 'File or folder name cannot have leading or trailing whitespace',
+      })
+      .optional(),
     parentId: FileIdSchema.nullable().optional(),
   })
   .strict();

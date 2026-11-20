@@ -537,6 +537,72 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
     },
   });
 
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/projects/{projectId}/files/{fileId}',
+    summary: 'Get details of a single file or directory',
+    security: [{ bearerAuth: [] }],
+    request: {
+      params: z
+        .object({
+          projectId: z.string().uuid(),
+          fileId: z.string().uuid(),
+        })
+        .strict(),
+    },
+    responses: {
+      200: {
+        description: 'File details',
+        content: {
+          'application/json': { schema: createSuccessEnvelopeSchema(ProjectFileDTOSchema) },
+        },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'delete',
+    path: '/api/v1/projects/{projectId}/files/{fileId}',
+    summary: 'Soft-delete a file or directory tree',
+    security: [{ bearerAuth: [] }],
+    request: {
+      params: z
+        .object({
+          projectId: z.string().uuid(),
+          fileId: z.string().uuid(),
+        })
+        .strict(),
+    },
+    responses: {
+      204: {
+        description: 'File or directory deleted successfully',
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/projects/{projectId}/files/{fileId}/set-main',
+    summary: 'Set document as the main compilation file',
+    security: [{ bearerAuth: [] }],
+    request: {
+      params: z
+        .object({
+          projectId: z.string().uuid(),
+          fileId: z.string().uuid(),
+        })
+        .strict(),
+    },
+    responses: {
+      200: {
+        description: 'Main file set successfully',
+        content: {
+          'application/json': { schema: createSuccessEnvelopeSchema(z.object({ success: z.boolean() })) },
+        },
+      },
+    },
+  });
+
   // Documents: Content Autosave
   registry.registerPath({
     method: 'get',

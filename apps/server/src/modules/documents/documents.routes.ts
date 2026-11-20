@@ -35,4 +35,3 @@ export function createDocumentsRouter(options: DocumentsRouterOptions): Router {
 
   return router;
 }
-

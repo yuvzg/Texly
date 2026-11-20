@@ -200,6 +200,7 @@ export class CompilationsController {
         download,
       );
 
+      res.setHeader('Cache-Control', 'private, max-age=60');
       res.status(200).json({
         data: pdfData,
         meta: {

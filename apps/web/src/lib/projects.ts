@@ -1,5 +1,5 @@
 import { apiClient } from './api-client';
-import type { ProjectDTO, CreateProjectRequest } from '@texly/shared';
+import type { ProjectDTO, CreateProjectRequest, UpdateProjectRequest } from '@texly/shared';
 
 export interface ListProjectsParams {
   workspaceId?: string | undefined;
@@ -42,3 +42,12 @@ export async function deleteProject(projectId: string): Promise<void> {
   return apiClient.delete<void>(`/projects/${projectId}`);
 }
 
+/**
+ * Updates settings for a specific project.
+ */
+export async function updateProject(
+  projectId: string,
+  data: UpdateProjectRequest,
+): Promise<ProjectDTO> {
+  return apiClient.patch<ProjectDTO>(`/projects/${projectId}`, data);
+}

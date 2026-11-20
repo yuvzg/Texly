@@ -130,7 +130,8 @@ describe('Documents API & Persistence (Integration)', () => {
     projectId = project.id;
 
     // Create main.tex file and document
-    const initialContent = '\\documentclass{article}\n\\begin{document}\nHello World\n\\end{document}';
+    const initialContent =
+      '\\documentclass{article}\n\\begin{document}\nHello World\n\\end{document}';
     const initialHash = crypto.createHash('sha256').update(initialContent, 'utf8').digest('hex');
 
     const mainFile = await db.db.client.projectFile.create({
@@ -200,7 +201,8 @@ describe('Documents API & Persistence (Integration)', () => {
 
   describe('PUT /api/v1/projects/:projectId/documents/:documentId/content', () => {
     it('successfully saves document content, updates hash and increments revision', async () => {
-      const updatedContent = '\\documentclass{article}\n\\begin{document}\nUpdated Content 1\n\\end{document}';
+      const updatedContent =
+        '\\documentclass{article}\n\\begin{document}\nUpdated Content 1\n\\end{document}';
 
       const res = await request(app)
         .put(`/api/v1/projects/${projectId}/documents/${mainDocId}/content`)
@@ -253,7 +255,8 @@ describe('Documents API & Persistence (Integration)', () => {
     });
 
     it('detects revision conflict (409) when baseRevision is stale', async () => {
-      const staleContent = '\\documentclass{article}\n\\begin{document}\nStale edit\n\\end{document}';
+      const staleContent =
+        '\\documentclass{article}\n\\begin{document}\nStale edit\n\\end{document}';
 
       // Pass baseRevision: 1 when server is already at revision 2
       const res = await request(app)
@@ -311,4 +314,3 @@ describe('Documents API & Persistence (Integration)', () => {
     });
   });
 });
-

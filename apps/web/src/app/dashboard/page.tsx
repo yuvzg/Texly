@@ -37,7 +37,9 @@ import type { ProjectDTO, WorkspaceWithRoleDTO, AuthWorkspaceSummaryDTO } from '
 export default function DashboardPage() {
   const router = useRouter();
   const { user, workspaces, logout } = useAuth();
-  const [localWorkspaces, setLocalWorkspaces] = useState<Array<AuthWorkspaceSummaryDTO | WorkspaceWithRoleDTO>>([]);
+  const [localWorkspaces, setLocalWorkspaces] = useState<
+    Array<AuthWorkspaceSummaryDTO | WorkspaceWithRoleDTO>
+  >([]);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [isNewWorkspaceOpen, setIsNewWorkspaceOpen] = useState(false);
@@ -337,12 +339,18 @@ export default function DashboardPage() {
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
                   <div className="text-xs">
-                    <span className="font-semibold block text-white">Your email address is unverified</span>
+                    <span className="font-semibold block text-white">
+                      Your email address is unverified
+                    </span>
                     <span>Please check your inbox at {user.email} for your verification link.</span>
                   </div>
                 </div>
                 <Link href="/verify-email">
-                  <Button size="sm" variant="outline" className="text-xs bg-amber-950/60 border-amber-600/40 text-amber-200">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs bg-amber-950/60 border-amber-600/40 text-amber-200"
+                  >
                     Verify Now
                   </Button>
                 </Link>
@@ -388,11 +396,7 @@ export default function DashboardPage() {
                     ? `No projects matched "${searchQuery}". Try a different keyword.`
                     : 'Get started by creating your first LaTeX project with standard templates or a blank slate.'}
                 </p>
-                <Button
-                  size="default"
-                  onClick={() => setIsNewProjectOpen(true)}
-                  className="mt-2"
-                >
+                <Button size="default" onClick={() => setIsNewProjectOpen(true)} className="mt-2">
                   <Plus className="h-4 w-4 mr-1.5" /> Create Project
                 </Button>
               </div>
@@ -411,7 +415,10 @@ export default function DashboardPage() {
                             <FileCode className="h-4.5 w-4.5" />
                           </div>
                           <div className="min-w-0 max-w-[180px]">
-                            <h3 className="font-semibold text-sm text-white truncate group-hover:text-[#00D69A] transition-colors" title={p.name}>
+                            <h3
+                              className="font-semibold text-sm text-white truncate group-hover:text-[#00D69A] transition-colors"
+                              title={p.name}
+                            >
                               {p.name}
                             </h3>
                             <span className="text-[10px] text-[#00D69A]/80 font-mono tracking-wider">
@@ -447,7 +454,9 @@ export default function DashboardPage() {
                           {p.description}
                         </p>
                       ) : (
-                        <p className="text-xs text-[#94A3B8]/40 italic mt-3">No description provided</p>
+                        <p className="text-xs text-[#94A3B8]/40 italic mt-3">
+                          No description provided
+                        </p>
                       )}
                     </div>
 

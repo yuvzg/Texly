@@ -62,7 +62,11 @@ export default function HomePage() {
 
         {/* Hero Headline */}
         <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-3xl leading-[1.18] font-display">
-          Draft <span className="font-mono font-bold text-[#ECFDF5] tracking-normal px-2.5 py-1 rounded-xl bg-[#003D30]/70 border border-[#00D69A]/30 text-3xl sm:text-5xl mx-1 align-middle shadow-[0_0_15px_rgba(0,214,154,0.15)]">LaTeX</span> with{' '}
+          Draft{' '}
+          <span className="font-mono font-bold text-[#ECFDF5] tracking-normal px-2.5 py-1 rounded-xl bg-[#003D30]/70 border border-[#00D69A]/30 text-3xl sm:text-5xl mx-1 align-middle shadow-[0_0_15px_rgba(0,214,154,0.15)]">
+            LaTeX
+          </span>{' '}
+          with{' '}
           <span className="font-heading italic text-transparent bg-clip-text bg-gradient-to-r from-[#00D69A] via-[#A7F3D0] to-[#00D69A]">
             Precision
           </span>{' '}
@@ -70,13 +74,17 @@ export default function HomePage() {
         </h1>
 
         <p className="mt-6 text-base sm:text-xl text-[#94A3B8] max-w-2xl leading-relaxed">
-          Texly brings isolated Docker sandboxing, deterministic TeX Live builds, and transparent AI proposals into a sleek, dark emerald workspace.
+          Texly brings isolated Docker sandboxing, deterministic TeX Live builds, and transparent AI
+          proposals into a sleek, dark emerald workspace.
         </p>
 
         {/* Action Buttons */}
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4 w-full sm:w-auto">
           <Link href="/register" className="w-full sm:w-auto">
-            <Button size="lg" className="w-full sm:w-auto text-base flex items-center justify-center gap-2">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto text-base flex items-center justify-center gap-2"
+            >
               Start Writing <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
@@ -95,7 +103,8 @@ export default function HomePage() {
             </div>
             <h3 className="text-lg font-bold text-white mb-2">Isolated Sandboxes</h3>
             <p className="text-sm text-[#94A3B8] leading-relaxed">
-              Every compile executes in a dedicated, hardened container with read-only rootfs, dropped capabilities, and strict CPU & memory caps.
+              Every compile executes in a dedicated, hardened container with read-only rootfs,
+              dropped capabilities, and strict CPU & memory caps.
             </p>
           </div>
 
@@ -105,7 +114,8 @@ export default function HomePage() {
             </div>
             <h3 className="text-lg font-bold text-white mb-2">AI Proposals</h3>
             <p className="text-sm text-[#94A3B8] leading-relaxed">
-              AI suggests targeted LaTeX edits with visual side-by-side diffs. You inspect, accept, or reject before anything touches your project.
+              AI suggests targeted LaTeX edits with visual side-by-side diffs. You inspect, accept,
+              or reject before anything touches your project.
             </p>
           </div>
 
@@ -115,7 +125,8 @@ export default function HomePage() {
             </div>
             <h3 className="text-lg font-bold text-white mb-2">Multi-Tenant Isolation</h3>
             <p className="text-sm text-[#94A3B8] leading-relaxed">
-              True tenant isolation with distinct workspaces, row-level PostgreSQL security, and cryptographic SHA-256 asset tracking.
+              True tenant isolation with distinct workspaces, row-level PostgreSQL security, and
+              cryptographic SHA-256 asset tracking.
             </p>
           </div>
         </div>

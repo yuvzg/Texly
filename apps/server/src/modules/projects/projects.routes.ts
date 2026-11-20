@@ -1,6 +1,10 @@
 import { Router, type RequestHandler } from 'express';
 import type { ProjectsController } from './projects.controller.js';
-import { CreateProjectRequestSchema, ErrorCodeEnum } from '@texly/shared';
+import {
+  CreateProjectRequestSchema,
+  UpdateProjectRequestSchema,
+  ErrorCodeEnum,
+} from '@texly/shared';
 import { AppError } from '../../http/middleware/error-handler.js';
 
 export interface ProjectsRouterOptions {
@@ -37,9 +41,22 @@ export function createProjectsRouter(options: ProjectsRouterOptions): Router {
   // GET /projects/:projectId - get project details
   router.get('/:projectId', options.controller.getProject);
 
+  // PATCH /projects/:projectId - update project settings
+  router.patch('/:projectId', (req, res, next) => {
+    const parseResult = UpdateProjectRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return next(
+        new AppError(ErrorCodeEnum.VALIDATION_FAILED, 422, 'Invalid update project request', {
+          fields: parseResult.error.flatten().fieldErrors,
+        }),
+      );
+    }
+    req.body = parseResult.data;
+    return options.controller.updateProject(req, res, next);
+  });
+
   // DELETE /projects/:projectId - delete project (move to trash)
   router.delete('/:projectId', options.controller.deleteProject);
 
   return router;
 }
-

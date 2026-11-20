@@ -1,6 +1,7 @@
 import React from 'react';
-import { Loader2, CheckCircle2, AlertCircle, Clock, Ban } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Clock, Ban, Radio } from 'lucide-react';
 import type { CompilationDTO } from '@texly/shared';
+import type { SocketConnectionStatus } from '@/lib/socket-client';
 import { cn } from '@/lib/utils';
 
 export interface CompileStatusChipProps {
@@ -8,6 +9,7 @@ export interface CompileStatusChipProps {
   lastSuccessfulCompilation: CompilationDTO | null;
   isCompiling: boolean;
   isSaving: boolean;
+  socketStatus?: SocketConnectionStatus | undefined;
   className?: string;
   onClickHistory?: () => void;
 }
@@ -31,9 +33,33 @@ export function CompileStatusChip({
   lastSuccessfulCompilation,
   isCompiling: _isCompiling,
   isSaving,
+  socketStatus,
   className,
   onClickHistory,
 }: CompileStatusChipProps) {
+  // Live socket indicator dot
+  const renderLiveDot = () => {
+    if (socketStatus === 'connected') {
+      return (
+        <span
+          data-testid="socket-indicator-connected"
+          className="relative flex h-2 w-2"
+          title="Realtime WebSocket connected"
+        >
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00D69A] opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00D69A]" />
+        </span>
+      );
+    }
+    return (
+      <span
+        data-testid="socket-indicator-disconnected"
+        className="h-2 w-2 rounded-full bg-zinc-600"
+        title="Polling fallback active"
+      />
+    );
+  };
+
   if (isSaving) {
     return (
       <div
@@ -57,12 +83,13 @@ export function CompileStatusChip({
         <div
           data-testid="status-chip-queued"
           className={cn(
-            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950/40 dark:bg-[#003D30]/60 text-emerald-400 dark:text-[#00D69A] border border-emerald-800/40 dark:border-[#00D69A]/30',
+            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#003D30]/60 text-[#00D69A] border border-[#00D69A]/30',
             className,
           )}
         >
           <Clock className="h-3 w-3 animate-pulse text-[#00D69A]" />
           <span>Queued ({engine.toLowerCase()})</span>
+          {renderLiveDot()}
         </div>
       );
 
@@ -77,6 +104,7 @@ export function CompileStatusChip({
         >
           <Loader2 className="h-3 w-3 animate-spin text-[#00D69A]" />
           <span>Compiling... ({engine.toLowerCase()})</span>
+          {renderLiveDot()}
         </div>
       );
 
@@ -104,6 +132,7 @@ export function CompileStatusChip({
               {(currentCompilation.durationMs / 1000).toFixed(1)}s
             </span>
           ) : null}
+          {renderLiveDot()}
         </div>
       );
 
@@ -131,9 +160,26 @@ export function CompileStatusChip({
               {currentCompilation.warningCount} w
             </span>
           )}
+          {renderLiveDot()}
         </div>
       );
     }
+
+    case 'TIMED_OUT':
+      return (
+        <div
+          data-testid="status-chip-timed-out"
+          onClick={onClickHistory}
+          className={cn(
+            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-950/60 text-rose-300 border border-rose-900/50 cursor-pointer hover:bg-rose-950/80 transition-colors',
+            className,
+          )}
+        >
+          <AlertCircle className="h-3 w-3 text-rose-400" />
+          <span>Timed out</span>
+          {renderLiveDot()}
+        </div>
+      );
 
     case 'CANCELLED':
       return (
@@ -146,6 +192,7 @@ export function CompileStatusChip({
         >
           <Ban className="h-3 w-3 text-gray-500 dark:text-gray-400" />
           <span>Cancelled</span>
+          {renderLiveDot()}
         </div>
       );
 
@@ -169,6 +216,7 @@ export function CompileStatusChip({
                 {formatRelativeTime(lastSuccessfulCompilation.finishedAt)}
               </span>
             )}
+            {renderLiveDot()}
           </div>
         );
       }
@@ -183,6 +231,7 @@ export function CompileStatusChip({
         >
           <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-[#00D69A]/40" />
           <span>Not compiled</span>
+          {renderLiveDot()}
         </div>
       );
   }

@@ -1,5 +1,9 @@
 import { apiClient } from './api-client';
-import type { DocumentDTO, PutDocumentContentRequest, PutDocumentContentResponseData } from '@texly/shared';
+import type {
+  DocumentDTO,
+  PutDocumentContentRequest,
+  PutDocumentContentResponseData,
+} from '@texly/shared';
 
 /**
  * Computes hexadecimal SHA-256 hash using the Web Crypto API.
@@ -39,4 +43,3 @@ export async function saveDocumentContent(
     data,
   );
 }
-

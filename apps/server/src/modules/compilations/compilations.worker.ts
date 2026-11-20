@@ -135,7 +135,8 @@ export class CompilationsWorker {
     let finalStatus = result.status;
     let errorCode = result.errorCode;
 
-    const workspaceId = (compilation as { project?: { workspaceId: string } | null }).project?.workspaceId;
+    const workspaceId = (compilation as { project?: { workspaceId: string } | null }).project
+      ?.workspaceId;
     const expectedPdfKey = workspaceId
       ? this.storageService.buildKey.compilation(
           workspaceId,
@@ -162,7 +163,8 @@ export class CompilationsWorker {
       : null;
 
     const actualPdfKey = result.outputs.pdfKey && expectedPdfKey ? expectedPdfKey : null;
-    const actualSynctexKey = result.outputs.synctexKey && expectedSynctexKey ? expectedSynctexKey : null;
+    const actualSynctexKey =
+      result.outputs.synctexKey && expectedSynctexKey ? expectedSynctexKey : null;
     const actualLogKey = result.outputs.logKey && expectedLogKey ? expectedLogKey : null;
 
     // Verify uploaded artifacts via HEAD requests

@@ -14,4 +14,3 @@ export async function fetchWorkspaces(): Promise<WorkspaceWithRoleDTO[]> {
 export async function createWorkspace(data: CreateWorkspaceRequest): Promise<WorkspaceWithRoleDTO> {
   return apiClient.post<WorkspaceWithRoleDTO>('/workspaces', data);
 }
-

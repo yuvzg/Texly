@@ -31,7 +31,10 @@ export class ProjectsService {
     });
   }
 
-  public async listProjects(userId: string, options: ListProjectsOptions = {}): Promise<ProjectDTO[]> {
+  public async listProjects(
+    userId: string,
+    options: ListProjectsOptions = {},
+  ): Promise<ProjectDTO[]> {
     return this.projectsRepository.findProjectsByUser(userId, options);
   }
 
@@ -43,8 +46,22 @@ export class ProjectsService {
     return project;
   }
 
+  public async updateProject(
+    projectId: string,
+    userId: string,
+    data: {
+      name?: string | undefined;
+      description?: string | null | undefined;
+      engine?: any;
+      bibTool?: any;
+      mainFileId?: string | null | undefined;
+      autoCompile?: boolean | undefined;
+    },
+  ): Promise<ProjectDTO> {
+    return this.projectsRepository.updateProject(projectId, userId, data);
+  }
+
   public async deleteProject(projectId: string, userId: string): Promise<void> {
     await this.projectsRepository.deleteProject(projectId, userId);
   }
 }
-

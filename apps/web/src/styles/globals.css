@@ -87,7 +87,7 @@ body {
 /* Ambient glow and texture styles */
 .bg-texly-glow {
   background-color: #050807;
-  background-image: 
+  background-image:
     radial-gradient(circle at 10% 10%, rgba(0, 61, 48, 0.45) 0%, transparent 45%),
     radial-gradient(circle at 90% 90%, rgba(0, 214, 154, 0.08) 0%, transparent 40%),
     radial-gradient(circle at 50% 50%, rgba(0, 30, 23, 0.6) 0%, transparent 70%);
@@ -145,6 +145,58 @@ body {
 :focus-visible {
   outline: 2px solid #00d69a;
   outline-offset: 2px;
+}
+
+/* PDF.js Text Layer and Page Styling */
+.pdf-page-container {
+  position: relative;
+  box-shadow:
+    0 4px 20px -2px rgba(0, 0, 0, 0.4),
+    0 0 1px 1px rgba(0, 214, 154, 0.1);
+  background-color: #ffffff;
+  transition: box-shadow 0.2s ease;
+}
+
+.pdf-page-container:hover {
+  box-shadow:
+    0 6px 24px -2px rgba(0, 0, 0, 0.5),
+    0 0 1px 1px rgba(0, 214, 154, 0.25);
+}
+
+.textLayer {
+  position: absolute;
+  text-align: initial;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 2;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+}
+
+.textLayer ::selection {
+  background: rgba(0, 214, 154, 0.35);
+  color: transparent;
+}
+
+.textLayer ::-moz-selection {
+  background: rgba(0, 214, 154, 0.35);
+  color: transparent;
 }
 
 /* Reduced motion preference */

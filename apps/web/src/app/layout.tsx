@@ -7,10 +7,7 @@ export const metadata: Metadata = {
   title: 'Texly — Modern Collaborative LaTeX Editor',
   description: 'High-performance, collaborative web-based LaTeX editor with intuitive AI workflows',
   icons: {
-    icon: [
-      { url: '/icon.jpg', sizes: '1024x1024', type: 'image/jpeg' },
-      { url: '/favicon.ico' },
-    ],
+    icon: [{ url: '/icon.jpg', sizes: '1024x1024', type: 'image/jpeg' }, { url: '/favicon.ico' }],
     shortcut: '/favicon.ico',
     apple: '/icon.jpg',
   },

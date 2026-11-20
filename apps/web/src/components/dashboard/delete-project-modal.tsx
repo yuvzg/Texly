@@ -81,8 +81,9 @@ export function DeleteProjectModal({
           )}
 
           <p className="text-sm text-[#94A3B8] leading-relaxed">
-            Are you sure you want to delete <span className="font-semibold text-white">"{project.name}"</span>?
-            This will move the project and its LaTeX documents to trash.
+            Are you sure you want to delete{' '}
+            <span className="font-semibold text-white">"{project.name}"</span>? This will move the
+            project and its LaTeX documents to trash.
           </p>
 
           <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-[#00D69A]/10">
@@ -118,4 +119,3 @@ export function DeleteProjectModal({
     </div>
   );
 }
-

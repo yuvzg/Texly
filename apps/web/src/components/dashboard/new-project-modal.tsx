@@ -127,10 +127,15 @@ export function NewProjectModal({
         {/* Header */}
         <div className="h-16 px-6 border-b border-[#00D69A]/15 flex items-center justify-between bg-[#08100D]">
           <div>
-            <h2 id="modal-title" className="text-base sm:text-lg font-bold text-white leading-tight">
+            <h2
+              id="modal-title"
+              className="text-base sm:text-lg font-bold text-white leading-tight"
+            >
               Create New Project
             </h2>
-            <p className="text-[11px] text-[#94A3B8]">Initialize a new LaTeX document in your workspace</p>
+            <p className="text-[11px] text-[#94A3B8]">
+              Initialize a new LaTeX document in your workspace
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -215,12 +220,12 @@ export function NewProjectModal({
                     }`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
-                      <Icon className={`h-4 w-4 ${isSelected ? 'text-[#00D69A]' : 'text-[#94A3B8]'}`} />
+                      <Icon
+                        className={`h-4 w-4 ${isSelected ? 'text-[#00D69A]' : 'text-[#94A3B8]'}`}
+                      />
                       {isSelected && <Check className="h-3.5 w-3.5 text-[#00D69A]" />}
                     </div>
-                    <span className="text-xs font-semibold text-white leading-tight">
-                      {t.name}
-                    </span>
+                    <span className="text-xs font-semibold text-white leading-tight">{t.name}</span>
                     <span className="text-[11px] text-[#94A3B8] leading-tight mt-0.5 line-clamp-2">
                       {t.description}
                     </span>
@@ -253,12 +258,7 @@ export function NewProjectModal({
 
           {/* Buttons */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#00D69A]/15">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button
