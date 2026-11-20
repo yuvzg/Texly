@@ -1,6 +1,7 @@
 import { Redis } from 'ioredis';
 import { getDbClient, type DatabaseInstance } from '@texly/db';
 import { env, type ServerEnv } from './config/env.js';
+import { logger } from './logging/logger.js';
 import {
   PasswordService,
   JwtService,
@@ -89,10 +90,9 @@ export function buildContainer(dependencies: ContainerDependencies = {}) {
   } else {
     try {
       const redisClient = new Redis(currentEnv.REDIS_URL, {
-        lazyConnect: true,
         maxRetriesPerRequest: 1,
-        enableOfflineQueue: false,
       });
+      redisClient.on('error', (err) => logger.warn({ err }, 'Redis rate limit client error'));
       rateLimitStore = new RedisRateLimitStore(redisClient);
     } catch {
       rateLimitStore = new MemoryRateLimitStore();

@@ -119,3 +119,4 @@ describe('IndexedDB Draft Storage (Local Crash Recovery)', () => {
     expect(projectBDrafts[0]?.documentId).toBe('doc-proj2-c');
   });
 });
+

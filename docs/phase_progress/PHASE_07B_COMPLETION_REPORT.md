@@ -208,3 +208,4 @@ All components adhere to Texly's Dark Emerald design system tokens:
 | `apps/web/src/__tests__/components/conflict-modal.test.tsx` | Tests for conflict modal rendering and actions. |
 | `apps/web/src/__tests__/components/draft-recovery-banner.test.tsx` | Tests for draft recovery banner interactions. |
 | `apps/web/src/__tests__/integration/autosave-conflict.integration.test.tsx` | Integration test for concurrent two-tab editing and conflict resolution. |
+

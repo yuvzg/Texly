@@ -146,3 +146,4 @@ export async function clearAllDrafts(): Promise<void> {
     console.warn('Failed to clear drafts from IndexedDB:', err);
   }
 }
+

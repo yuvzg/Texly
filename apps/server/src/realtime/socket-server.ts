@@ -43,9 +43,7 @@ export function setupSocketServer(options: SetupSocketOptions): SocketIOServer {
   } else if (options.redisUrl) {
     try {
       const pubClient = new Redis(options.redisUrl, {
-        lazyConnect: true,
-        maxRetriesPerRequest: 1,
-        enableOfflineQueue: false,
+        maxRetriesPerRequest: null,
       });
       const subClient = pubClient.duplicate();
       pubClient.on('error', (err) => logger.warn({ err }, 'Socket.IO Redis pubClient error'));

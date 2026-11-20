@@ -51,3 +51,4 @@ describe('DraftRecoveryBanner Component', () => {
     expect(handleDiscard).toHaveBeenCalledTimes(1);
   });
 });
+
