@@ -14,6 +14,9 @@ export function startApiServer() {
     httpServer,
     jwtService: container.jwtService,
     realtimeEmitter: container.realtimeEmitter,
+    documentsRepository: container.documentsRepo,
+    prisma: container.db.client,
+    redisUrl: env.REDIS_URL,
     corsAllowedOrigins: env.CORS_ALLOWED_ORIGINS,
   });
 

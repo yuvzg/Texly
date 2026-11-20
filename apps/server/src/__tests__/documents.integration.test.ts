@@ -312,5 +312,106 @@ describe('Documents API & Persistence (Integration)', () => {
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe(ErrorCodeEnum.FORBIDDEN);
     });
+
+    it('enforces atomic concurrency: two concurrent updates with the same base revision produce exactly one winner and one 409', async () => {
+      const currentDoc = await db.db.client.document.findUnique({
+        where: { id: mainDocId },
+      });
+      const baseRevision = currentDoc!.revision;
+
+      const contentA = `\\documentclass{article}\n\\begin{document}\nConcurrent Writer A at rev ${baseRevision}\n\\end{document}`;
+      const contentB = `\\documentclass{article}\n\\begin{document}\nConcurrent Writer B at rev ${baseRevision}\n\\end{document}`;
+
+      // Execute both requests concurrently in parallel
+      const [resA, resB] = await Promise.all([
+        request(app)
+          .put(`/api/v1/projects/${projectId}/documents/${mainDocId}/content`)
+          .set('Authorization', `Bearer ${editorToken}`)
+          .send({
+            baseRevision,
+            content: contentA,
+          }),
+        request(app)
+          .put(`/api/v1/projects/${projectId}/documents/${mainDocId}/content`)
+          .set('Authorization', `Bearer ${editorToken}`)
+          .send({
+            baseRevision,
+            content: contentB,
+          }),
+      ]);
+
+      const statuses = [resA.status, resB.status];
+      expect(statuses).toContain(200);
+      expect(statuses).toContain(409);
+
+      const winningRes = resA.status === 200 ? resA : resB;
+      const conflictingRes = resA.status === 409 ? resA : resB;
+
+      expect(winningRes.body.data.revision).toBe(baseRevision + 1);
+      expect(conflictingRes.body.error.code).toBe(ErrorCodeEnum.REVISION_CONFLICT);
+      expect(conflictingRes.body.error.details.serverRevision).toBe(baseRevision + 1);
+
+      // Verify PostgreSQL state: revision incremented by exactly 1
+      const persisted = await db.db.client.document.findUnique({
+        where: { id: mainDocId },
+      });
+      expect(persisted?.revision).toBe(baseRevision + 1);
+
+      // Content matches winning payload exactly
+      const winningContent = resA.status === 200 ? contentA : contentB;
+      expect(persisted?.content).toBe(winningContent);
+    });
+
+    it('supports direct endpoint PUT /api/v1/documents/:documentId/content', async () => {
+      const currentDoc = await db.db.client.document.findUnique({
+        where: { id: mainDocId },
+      });
+      const baseRevision = currentDoc!.revision;
+      const updatedContent = '\\documentclass{article}\n\\begin{document}\nDirect endpoint update\n\\end{document}';
+
+      const res = await request(app)
+        .put(`/api/v1/documents/${mainDocId}/content`)
+        .set('Authorization', `Bearer ${editorToken}`)
+        .send({
+          baseRevision,
+          content: updatedContent,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.revision).toBe(baseRevision + 1);
+
+      const persisted = await db.db.client.document.findUnique({
+        where: { id: mainDocId },
+      });
+      expect(persisted?.content).toBe(updatedContent);
+      expect(persisted?.revision).toBe(baseRevision + 1);
+    });
+
+    it('rejects cross-project document access with 404', async () => {
+      // Create a second project
+      const otherProject = await db.db.client.project.create({
+        data: {
+          workspaceId,
+          name: 'Other Project',
+          engine: 'PDFLATEX',
+          bibTool: 'AUTO',
+          createdById: ownerUserId,
+          members: {
+            create: [{ userId: editorUserId, role: 'EDITOR' }],
+          },
+        },
+      });
+
+      // Try accessing mainDocId from project 1 under otherProject.id
+      const res = await request(app)
+        .put(`/api/v1/projects/${otherProject.id}/documents/${mainDocId}/content`)
+        .set('Authorization', `Bearer ${editorToken}`)
+        .send({
+          baseRevision: 1,
+          content: 'Cross project injection',
+        });
+
+      expect(res.status).toBe(404);
+    });
   });
 });

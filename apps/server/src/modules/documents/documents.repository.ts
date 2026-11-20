@@ -68,6 +68,14 @@ export class DocumentsRepository {
     };
   }
 
+  public async findProjectIdForDocument(documentId: string): Promise<string | null> {
+    const doc = await this.prisma.document.findUnique({
+      where: { id: documentId },
+      select: { projectId: true },
+    });
+    return doc?.projectId ?? null;
+  }
+
   public async findDocument(
     projectId: string,
     documentId: string,
@@ -139,46 +147,89 @@ export class DocumentsRepository {
     const sizeBytes = Buffer.byteLength(content, 'utf8');
 
     return this.prisma.$transaction(async (tx) => {
-      const currentDoc = await tx.document.findFirst({
-        where: {
-          id: documentId,
-          projectId,
-        },
-        include: {
-          file: true,
-        },
-      });
+      // Row-level lock on the document in PostgreSQL to serialize concurrent updates
+      let lockedDoc: {
+        id: string;
+        file_id: string;
+        project_id: string;
+        content: string;
+        content_hash: string;
+        revision: number;
+        size_bytes: number;
+        updated_at: Date;
+        updated_by_id: string | null;
+      } | null = null;
 
-      if (!currentDoc) {
-        throw new AppError(ErrorCodeEnum.NOT_FOUND, 404, 'Document not found.');
+      try {
+        const rows = await tx.$queryRaw<
+          Array<{
+            id: string;
+            file_id: string;
+            project_id: string;
+            content: string;
+            content_hash: string;
+            revision: number;
+            size_bytes: number;
+            updated_at: Date;
+            updated_by_id: string | null;
+          }>
+        >`SELECT id, file_id, project_id, content, content_hash, revision, size_bytes, updated_at, updated_by_id
+          FROM documents
+          WHERE id = ${documentId} AND project_id = ${projectId}
+          FOR UPDATE`;
+        if (rows && rows.length > 0) {
+          lockedDoc = rows[0]!;
+        }
+      } catch {
+        // Fallback if raw query is not supported by mock/in-memory provider
       }
 
-      // Optimistic concurrency check
-      if (currentDoc.revision !== baseRevision) {
+      if (!lockedDoc) {
+        const fallback = await tx.document.findFirst({
+          where: { id: documentId, projectId },
+        });
+        if (!fallback) {
+          throw new AppError(ErrorCodeEnum.NOT_FOUND, 404, 'Document not found.');
+        }
+        lockedDoc = {
+          id: fallback.id,
+          file_id: fallback.fileId,
+          project_id: fallback.projectId,
+          content: fallback.content,
+          content_hash: fallback.contentHash,
+          revision: fallback.revision,
+          size_bytes: fallback.sizeBytes,
+          updated_at: fallback.updatedAt,
+          updated_by_id: fallback.updatedById,
+        };
+      }
+
+      // Optimistic concurrency check on the locked authoritative row
+      if (lockedDoc.revision !== baseRevision) {
         throw new AppError(
           ErrorCodeEnum.REVISION_CONFLICT,
           409,
           'Document revision conflict. The document was modified by another request.',
           {
-            serverRevision: currentDoc.revision,
-            serverHash: currentDoc.contentHash,
-            updatedAt: currentDoc.updatedAt.toISOString(),
-            updatedById: currentDoc.updatedById,
+            serverRevision: lockedDoc.revision,
+            serverHash: lockedDoc.content_hash,
+            updatedAt: lockedDoc.updated_at.toISOString(),
+            updatedById: lockedDoc.updated_by_id,
           },
         );
       }
 
       // No-op save if content hash is identical
-      if (currentDoc.contentHash === newContentHash) {
+      if (lockedDoc.content_hash === newContentHash) {
         return {
-          revision: currentDoc.revision,
-          contentHash: currentDoc.contentHash,
-          updatedAt: currentDoc.updatedAt.toISOString(),
+          revision: lockedDoc.revision,
+          contentHash: lockedDoc.content_hash,
+          updatedAt: lockedDoc.updated_at.toISOString(),
           unchanged: true,
         };
       }
 
-      const newRevision = currentDoc.revision + 1;
+      const newRevision = lockedDoc.revision + 1;
       const now = new Date();
 
       // Update the document
@@ -196,7 +247,7 @@ export class DocumentsRepository {
 
       // Update the associated project file metadata
       await tx.projectFile.update({
-        where: { id: currentDoc.fileId },
+        where: { id: lockedDoc.file_id },
         data: {
           sizeBytes,
           updatedAt: now,

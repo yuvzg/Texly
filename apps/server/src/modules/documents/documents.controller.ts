@@ -16,11 +16,18 @@ export class DocumentsController {
 
       const rawProjectId = req.params['projectId'];
       const rawDocumentId = req.params['documentId'];
-      const projectId = Array.isArray(rawProjectId) ? rawProjectId[0] : rawProjectId;
+      let projectId = Array.isArray(rawProjectId) ? rawProjectId[0] : rawProjectId;
       const documentId = Array.isArray(rawDocumentId) ? rawDocumentId[0] : rawDocumentId;
 
-      if (!projectId || !documentId) {
-        throw new AppError(ErrorCodeEnum.BAD_REQUEST, 400, 'Missing projectId or documentId');
+      if (!documentId) {
+        throw new AppError(ErrorCodeEnum.BAD_REQUEST, 400, 'Missing documentId');
+      }
+
+      if (!projectId) {
+        projectId = (await this.documentsService.findProjectIdForDocument(documentId)) ?? undefined;
+        if (!projectId) {
+          throw new AppError(ErrorCodeEnum.NOT_FOUND, 404, 'Document not found');
+        }
       }
 
       const document = await this.documentsService.getDocument(projectId, documentId, userId);
@@ -75,11 +82,18 @@ export class DocumentsController {
 
       const rawProjectId = req.params['projectId'];
       const rawDocumentId = req.params['documentId'];
-      const projectId = Array.isArray(rawProjectId) ? rawProjectId[0] : rawProjectId;
+      let projectId = Array.isArray(rawProjectId) ? rawProjectId[0] : rawProjectId;
       const documentId = Array.isArray(rawDocumentId) ? rawDocumentId[0] : rawDocumentId;
 
-      if (!projectId || !documentId) {
-        throw new AppError(ErrorCodeEnum.BAD_REQUEST, 400, 'Missing projectId or documentId');
+      if (!documentId) {
+        throw new AppError(ErrorCodeEnum.BAD_REQUEST, 400, 'Missing documentId');
+      }
+
+      if (!projectId) {
+        projectId = (await this.documentsService.findProjectIdForDocument(documentId)) ?? undefined;
+        if (!projectId) {
+          throw new AppError(ErrorCodeEnum.NOT_FOUND, 404, 'Document not found');
+        }
       }
 
       const body = req.body as PutDocumentContentRequest;

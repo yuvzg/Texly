@@ -19,7 +19,7 @@
     "lint": "eslint .",
     "prepare": "husky || true",
     "test": "turbo test --concurrency=1 && vitest run",
-    "test:contracts": "vitest run packages/shared/tests/",
+    "test:contracts": "pnpm --filter @texly/shared test",
     "typecheck": "turbo typecheck && tsc --noEmit"
   },
   "devDependencies": {

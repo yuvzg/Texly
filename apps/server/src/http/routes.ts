@@ -49,6 +49,7 @@ export function createApiRouter(container: AppContainer): Router {
   router.use('/users', container.usersRouter);
   router.use('/workspaces', container.workspacesRouter);
   router.use('/projects/:projectId/documents', container.documentsRouter);
+  router.use('/documents', container.documentsRouter);
   router.use('/projects/:projectId/files', container.filesRouter);
   router.use('/projects/:projectId/compilations', container.projectCompilationsRouter);
   router.use('/projects', container.projectsRouter);

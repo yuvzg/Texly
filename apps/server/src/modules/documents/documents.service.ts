@@ -15,6 +15,10 @@ export class DocumentsService {
     private readonly realtimeEmitter?: RealtimeEmitter | undefined,
   ) {}
 
+  public async findProjectIdForDocument(documentId: string): Promise<string | null> {
+    return this.documentsRepository.findProjectIdForDocument(documentId);
+  }
+
   public async getDocument(
     projectId: string,
     documentId: string,

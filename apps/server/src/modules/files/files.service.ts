@@ -257,7 +257,7 @@ export class FilesService {
     if (this.realtimeEmitter) {
       void this.realtimeEmitter.emitFileTreeChanged({
         projectId,
-        op: 'rename',
+        op: 'set_main',
         fileId,
         timestamp: new Date().toISOString(),
       });

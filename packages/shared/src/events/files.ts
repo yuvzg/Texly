@@ -1,7 +1,14 @@
 import { z } from 'zod';
 import { ProjectIdSchema, FileIdSchema } from '../ids/index.js';
 
-export const FileTreeOpSchema = z.enum(['create', 'rename', 'move', 'delete', 'upload']);
+export const FileTreeOpSchema = z.enum([
+  'create',
+  'rename',
+  'move',
+  'delete',
+  'upload',
+  'set_main',
+]);
 export type FileTreeOp = z.infer<typeof FileTreeOpSchema>;
 
 export const FileTreeChangedEventSchema = z

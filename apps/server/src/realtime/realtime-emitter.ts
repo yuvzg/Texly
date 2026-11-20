@@ -93,10 +93,11 @@ export class RealtimeEmitter {
 
   public async emitDocumentRevisionChanged(event: DocumentRevisionChangedEvent): Promise<void> {
     const room = `project:${event.projectId}`;
+    const docRoom = `document:${event.documentId}`;
     const eventName = 'document.revision.changed';
 
     if (this.io) {
-      this.io.to(room).emit(eventName, event);
+      this.io.to(room).to(docRoom).emit(eventName, event);
     }
 
     if (this.redisPublisher) {
