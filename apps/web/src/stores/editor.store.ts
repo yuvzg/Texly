@@ -1,4 +1,17 @@
 import { create } from 'zustand';
+import type { DocumentDraft } from '@/lib/draft-storage';
+
+export type DocumentSaveStatus = 'CLEAN' | 'DIRTY' | 'SAVING' | 'SAVED' | 'CONFLICT' | 'OFFLINE';
+
+export interface DocumentConflictData {
+  documentId: string;
+  projectId: string;
+  localContent: string;
+  serverContent: string;
+  localRevision: number;
+  serverRevision: number;
+  serverUpdatedAt?: string;
+}
 
 export interface DocumentTab {
   fileId: string;
@@ -20,6 +33,11 @@ export interface EditorStoreState {
   cachedStates: Record<string, CachedEditorState>;
   lastOpenedFileId: string | null;
 
+  // Concurrency & Persistence state
+  saveStatuses: Record<string, DocumentSaveStatus>;
+  conflicts: Record<string, DocumentConflictData | null>;
+  unrecoveredDrafts: Record<string, DocumentDraft | null>;
+
   // Actions
   openTab: (tab: DocumentTab) => void;
   closeTab: (fileId: string) => void;
@@ -34,6 +52,10 @@ export interface EditorStoreState {
   updateTabPath: (fileId: string, newPath: string, newName: string) => void;
   removeTabsBySubtree: (fileIds: string[]) => void;
   clearCachedState: (fileId: string) => void;
+
+  setSaveStatus: (id: string, status: DocumentSaveStatus) => void;
+  setConflict: (id: string, conflict: DocumentConflictData | null) => void;
+  setUnrecoveredDraft: (id: string, draft: DocumentDraft | null) => void;
   reset: () => void;
 }
 
@@ -42,6 +64,9 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
   activeFileId: null,
   cachedStates: {},
   lastOpenedFileId: null,
+  saveStatuses: {},
+  conflicts: {},
+  unrecoveredDrafts: {},
 
   openTab: (tab) => {
     const { tabs } = get();
@@ -67,7 +92,7 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
   },
 
   closeTab: (fileId) => {
-    const { tabs, activeFileId } = get();
+    const { tabs, activeFileId, cachedStates, saveStatuses, conflicts, unrecoveredDrafts } = get();
     const tabIndex = tabs.findIndex((t) => t.fileId === fileId);
     if (tabIndex === -1) return;
 
@@ -84,10 +109,21 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
       }
     }
 
+    // Clean up transient store entries for closed tab
+    const nextStatuses = { ...saveStatuses };
+    delete nextStatuses[fileId];
+    const nextConflicts = { ...conflicts };
+    delete nextConflicts[fileId];
+    const nextDrafts = { ...unrecoveredDrafts };
+    delete nextDrafts[fileId];
+
     set({
       tabs: newTabs,
       activeFileId: nextActiveId,
       lastOpenedFileId: nextActiveId,
+      saveStatuses: nextStatuses,
+      conflicts: nextConflicts,
+      unrecoveredDrafts: nextDrafts,
     });
   },
 
@@ -118,6 +154,9 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
       tabs: [],
       activeFileId: null,
       lastOpenedFileId: null,
+      saveStatuses: {},
+      conflicts: {},
+      unrecoveredDrafts: {},
     });
   },
 
@@ -185,13 +224,42 @@ export const useEditorStore = create<EditorStoreState>((set, get) => ({
     set({ cachedStates: rest });
   },
 
+  setSaveStatus: (id, status) => {
+    set((state) => ({
+      saveStatuses: {
+        ...state.saveStatuses,
+        [id]: status,
+      },
+    }));
+  },
+
+  setConflict: (id, conflict) => {
+    set((state) => ({
+      conflicts: {
+        ...state.conflicts,
+        [id]: conflict,
+      },
+    }));
+  },
+
+  setUnrecoveredDraft: (id, draft) => {
+    set((state) => ({
+      unrecoveredDrafts: {
+        ...state.unrecoveredDrafts,
+        [id]: draft,
+      },
+    }));
+  },
+
   reset: () => {
     set({
       tabs: [],
       activeFileId: null,
       cachedStates: {},
       lastOpenedFileId: null,
+      saveStatuses: {},
+      conflicts: {},
+      unrecoveredDrafts: {},
     });
   },
 }));
-

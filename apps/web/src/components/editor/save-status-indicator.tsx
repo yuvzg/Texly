@@ -1,6 +1,8 @@
 import React from 'react';
-import { Check, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import type { SaveStatus } from '@/hooks/use-document-autosave';
+import { Check, Loader2, AlertCircle, RefreshCw, WifiOff } from 'lucide-react';
+import type { DocumentSaveStatus } from '@/stores/editor.store';
+
+export type SaveStatus = DocumentSaveStatus | 'idle' | 'saving' | 'saved' | 'unsaved' | 'conflict' | 'error' | 'offline';
 
 interface SaveStatusIndicatorProps {
   status: SaveStatus;
@@ -8,6 +10,7 @@ interface SaveStatusIndicatorProps {
   errorMessage?: string | null;
   onRetry?: () => void;
   onReload?: () => void;
+  onResolveConflict?: () => void;
 }
 
 export function SaveStatusIndicator({
@@ -16,9 +19,12 @@ export function SaveStatusIndicator({
   errorMessage,
   onRetry,
   onReload,
+  onResolveConflict,
 }: SaveStatusIndicatorProps) {
-  switch (status) {
-    case 'saving':
+  const normalized = status.toUpperCase();
+
+  switch (normalized) {
+    case 'SAVING':
       return (
         <span
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse"
@@ -29,7 +35,7 @@ export function SaveStatusIndicator({
         </span>
       );
 
-    case 'saved':
+    case 'SAVED':
       return (
         <span
           className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-[#00D69A] font-medium"
@@ -41,7 +47,8 @@ export function SaveStatusIndicator({
         </span>
       );
 
-    case 'unsaved':
+    case 'DIRTY':
+    case 'UNSAVED':
       return (
         <span
           className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/50"
@@ -52,7 +59,19 @@ export function SaveStatusIndicator({
         </span>
       );
 
-    case 'conflict':
+    case 'OFFLINE':
+      return (
+        <span
+          className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/50"
+          data-testid="save-status-offline"
+          title={errorMessage || 'You are offline. Edits are safely stored in your browser draft.'}
+        >
+          <WifiOff className="h-3.5 w-3.5 text-amber-500" />
+          <span>Offline (Draft saved)</span>
+        </span>
+      );
+
+    case 'CONFLICT':
       return (
         <div
           className="inline-flex items-center gap-2 text-xs text-rose-600 dark:text-rose-300 font-medium bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-900/50"
@@ -61,7 +80,15 @@ export function SaveStatusIndicator({
         >
           <AlertCircle className="h-3.5 w-3.5 text-rose-500" />
           <span>Conflict detected</span>
-          {onReload && (
+          {onResolveConflict ? (
+            <button
+              type="button"
+              onClick={onResolveConflict}
+              className="underline font-semibold hover:text-rose-400 flex items-center gap-0.5 ml-1 cursor-pointer"
+            >
+              Resolve
+            </button>
+          ) : onReload ? (
             <button
               type="button"
               onClick={onReload}
@@ -69,11 +96,11 @@ export function SaveStatusIndicator({
             >
               <RefreshCw className="h-3 w-3" /> Reload
             </button>
-          )}
+          ) : null}
         </div>
       );
 
-    case 'error':
+    case 'ERROR':
       return (
         <div
           className="inline-flex items-center gap-2 text-xs text-rose-600 dark:text-rose-300 font-medium bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-900/50"
@@ -94,7 +121,8 @@ export function SaveStatusIndicator({
         </div>
       );
 
-    case 'idle':
+    case 'CLEAN':
+    case 'IDLE':
     default:
       return null;
   }

@@ -21,6 +21,8 @@ import { Button } from '@/components/ui/button';
 import { ProtectedRoute } from '@/components/auth/route-guards';
 import { CompileToolbar } from '@/components/editor/compile-toolbar';
 import { SaveStatusIndicator } from '@/components/editor/save-status-indicator';
+import { ConflictModal } from '@/components/editor/conflict-modal';
+import { DraftRecoveryBanner } from '@/components/editor/draft-recovery-banner';
 import { PdfViewer } from '@/components/pdf/pdf-viewer';
 import {
   CodeMirrorEditor,
@@ -31,6 +33,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { ThemeToggle } from '@/providers/theme-provider';
 import { useDocumentAutosave } from '@/hooks/use-document-autosave';
 import { useAutoCompile } from '@/hooks/use-auto-compile';
+import { useRealtimeSync } from '@/hooks/use-realtime-sync';
 import { FileExplorer } from '@/components/editor/file-explorer/file-explorer';
 import { DocumentTabs } from '@/components/editor/document-tabs';
 import { useEditorStore } from '@/stores/editor.store';
@@ -129,7 +132,9 @@ function WorkspaceContent() {
     };
   }, [projectId]);
 
-  // Document autosave
+  // Document autosave & conflict resolution
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
+
   const {
     document,
     content,
@@ -138,20 +143,50 @@ function WorkspaceContent() {
     errorMessage,
     lastSavedAt,
     isLoading,
+    unrecoveredDraft,
+    activeConflict,
     flushSave,
     reloadDocument,
+    resolveConflictUseServer,
+    resolveConflictKeepMine,
+    applyDraft,
+    discardDraft,
   } = useDocumentAutosave({
     projectId,
     documentId: activeDocumentId,
-    debounceMs: 1000,
+    debounceMs: 1500,
+  });
+
+  // Automatically open conflict modal when a conflict is detected
+  useEffect(() => {
+    if (activeConflict) {
+      setIsConflictModalOpen(true);
+    }
+  }, [activeConflict]);
+
+  // Realtime Socket.IO Synchronization
+  useRealtimeSync({
+    projectId,
+    activeDocumentId,
+    saveStatus: status,
+    onRemoteRevisionUpdate: () => {
+      // Background remote save landed while local was clean -> refresh
+      void reloadDocument();
+    },
+    onRemoteRevisionConflict: (event) => {
+      // Remote save landed while local is dirty
+      console.warn(
+        `Remote edit conflict: document ${event.documentId} modified to revision ${event.revision}`,
+      );
+    },
   });
 
   // Synchronize dirty tab status with autosave state
   useEffect(() => {
     if (activeFileId) {
-      if (status === 'unsaved') {
+      if (status === 'DIRTY' || status === 'unsaved') {
         setTabDirty(activeFileId, true, content);
-      } else if (status === 'saved') {
+      } else if (status === 'SAVED' || status === 'saved' || status === 'CLEAN') {
         setTabDirty(activeFileId, false);
       }
     }
@@ -329,6 +364,13 @@ function WorkspaceContent() {
         onSetMainFile={handleSetMainFile}
       />
 
+      {/* Local Crash Recovery Draft Banner */}
+      <DraftRecoveryBanner
+        draft={unrecoveredDraft}
+        onRestore={applyDraft}
+        onDiscard={discardDraft}
+      />
+
       {/* Editor Subheader */}
       <div className="h-9 border-b border-[#003D30]/30 px-4 flex items-center justify-between text-xs text-zinc-400 bg-[#0A120E] shrink-0">
         <div className="flex items-center gap-2">
@@ -345,6 +387,8 @@ function WorkspaceContent() {
             onRetry={() => {
               void flushSave();
             }}
+            onReload={reloadDocument}
+            onResolveConflict={() => setIsConflictModalOpen(true)}
           />
           <span className="text-[11px] text-zinc-500">
             {document ? `Rev ${document.revision} • LaTeX • UTF-8` : 'LaTeX • UTF-8'}
@@ -453,6 +497,7 @@ function WorkspaceContent() {
             errorMessage={errorMessage}
             onRetry={flushSave}
             onReload={reloadDocument}
+            onResolveConflict={() => setIsConflictModalOpen(true)}
           />
         </div>
 
@@ -607,6 +652,15 @@ function WorkspaceContent() {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+
+      {/* Revision Conflict Resolution Modal */}
+      <ConflictModal
+        isOpen={isConflictModalOpen}
+        conflict={activeConflict}
+        onUseServer={resolveConflictUseServer}
+        onKeepMine={resolveConflictKeepMine}
+        onClose={() => setIsConflictModalOpen(false)}
+      />
     </div>
   );
 }

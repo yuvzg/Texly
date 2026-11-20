@@ -39,8 +39,9 @@ export function useAutoCompile({
   };
 
   useEffect(() => {
+    const isSaved = saveStatus === 'saved' || saveStatus === 'SAVED';
     // If auto-compile is disabled or document is not in a cleanly saved state, clear timer
-    if (!enabled || saveStatus !== 'saved' || !lastSavedAt) {
+    if (!enabled || !isSaved || !lastSavedAt) {
       clearTimer();
       return;
     }
@@ -56,7 +57,7 @@ export function useAutoCompile({
 
     timerRef.current = setTimeout(() => {
       // Don't trigger if a compilation is actively running or document became unsaved/saving
-      if (!isCompiling && saveStatus === 'saved') {
+      if (!isCompiling && (saveStatus === 'saved' || saveStatus === 'SAVED')) {
         lastCompiledTimestampRef.current = savedTime;
         void compile(undefined, false, 'AUTO');
       }

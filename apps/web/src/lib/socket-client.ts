@@ -4,6 +4,9 @@ import type {
   CompilationQueuedEvent,
   CompilationStartedEvent,
   CompilationFinishedEvent,
+  DocumentRevisionChangedEvent,
+  FileTreeChangedEvent,
+  ProjectSyncResponse,
 } from '@texly/shared';
 
 export type SocketConnectionStatus = 'connected' | 'connecting' | 'disconnected';
@@ -11,6 +14,7 @@ export type SocketConnectionStatus = 'connected' | 'connecting' | 'disconnected'
 class SocketClientManager {
   private socket: Socket | null = null;
   private joinedProjects = new Set<string>();
+  private joinedDocuments = new Map<string, string>(); // documentId -> projectId
   private statusListeners = new Set<(status: SocketConnectionStatus) => void>();
   private currentStatus: SocketConnectionStatus = 'disconnected';
 
@@ -87,6 +91,10 @@ class SocketClientManager {
       for (const projectId of this.joinedProjects) {
         this.socket?.emit('project.join', { projectId });
       }
+      // Re-join any previously tracked document rooms
+      for (const [docId, projId] of this.joinedDocuments.entries()) {
+        this.socket?.emit('document.join', { projectId: projId, documentId: docId });
+      }
     });
 
     this.socket.on('disconnect', () => {
@@ -127,6 +135,43 @@ class SocketClientManager {
     }
   }
 
+  public joinDocument(projectId: string, documentId: string): void {
+    if (!projectId || !documentId) return;
+    this.joinedDocuments.set(documentId, projectId);
+
+    const socket = this.connect();
+    if (socket && socket.connected) {
+      socket.emit('document.join', { projectId, documentId });
+    }
+  }
+
+  public leaveDocument(documentId: string): void {
+    if (!documentId) return;
+    this.joinedDocuments.delete(documentId);
+
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('document.leave', { documentId });
+    }
+  }
+
+  public requestProjectSync(projectId: string): Promise<ProjectSyncResponse> {
+    return new Promise((resolve, reject) => {
+      const socket = this.connect();
+      if (!socket) {
+        reject(new Error('Socket not available'));
+        return;
+      }
+
+      socket.emit('project.sync', { projectId }, (response: any) => {
+        if (response && response.ok) {
+          resolve(response.data as ProjectSyncResponse);
+        } else {
+          reject(new Error(response?.error || 'Failed to sync project'));
+        }
+      });
+    });
+  }
+
   public onCompilationQueued(handler: (event: CompilationQueuedEvent) => void): () => void {
     const socket = this.connect();
     if (!socket) return () => {};
@@ -154,6 +199,28 @@ class SocketClientManager {
     if (!socket) return () => {};
 
     const eventName = 'compilation.finished';
+    socket.on(eventName, handler);
+    return () => {
+      socket.off(eventName, handler);
+    };
+  }
+
+  public onDocumentRevisionChanged(handler: (event: DocumentRevisionChangedEvent) => void): () => void {
+    const socket = this.connect();
+    if (!socket) return () => {};
+
+    const eventName = 'document.revision.changed';
+    socket.on(eventName, handler);
+    return () => {
+      socket.off(eventName, handler);
+    };
+  }
+
+  public onFileTreeChanged(handler: (event: FileTreeChangedEvent) => void): () => void {
+    const socket = this.connect();
+    if (!socket) return () => {};
+
+    const eventName = 'file.tree.changed';
     socket.on(eventName, handler);
     return () => {
       socket.off(eventName, handler);
